@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
+import { requireSupabase } from '../lib/supabase';
 
 interface Message {
   id: string;
@@ -165,25 +166,20 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const { data, error } = await requireSupabase().functions.invoke('chat', {
+        body: {
           language,
           messages: newMessages.map((m) => ({
             role: m.role,
             text: m.text,
           })),
-        }),
+        },
       });
 
-      if (!response.ok) {
-        throw new Error('API request failed');
+      if (error) {
+        throw error;
       }
 
-      const data = await response.json();
       const botReply = data.reply || (
         language === 'ko'
           ? '답변을 불러오지 못했습니다. 다시 시도해 주세요.'

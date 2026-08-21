@@ -1,98 +1,100 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { Project } from '../types';
 import { PROJECTS as DEFAULT_PROJECTS } from '../data/projects';
+import { isSupabaseConfigured, requireSupabase } from '../lib/supabase';
 
 interface ProjectsContextType {
   projects: Project[];
-  addProject: (projectData: Omit<Project, 'id'>) => Project;
-  updateProject: (id: string, updatedData: Partial<Project>) => void;
-  deleteProject: (id: string) => void;
-  resetToDefaults: () => void;
-  toggleFeatured: (id: string) => void;
+  isLoading: boolean;
+  error: string | null;
+  addProject: (projectData: Omit<Project, 'id'>) => Promise<Project>;
+  updateProject: (id: string, updatedData: Partial<Project>) => Promise<void>;
+  deleteProject: (id: string) => Promise<void>;
+  resetToDefaults: () => Promise<void>;
+  toggleFeatured: (id: string) => Promise<void>;
   getProjectById: (id: string) => Project | undefined;
+  refreshProjects: () => Promise<void>;
 }
-
-const PROJECTS_STORAGE_KEY = 'lovey_portfolio_projects_data';
 
 const ProjectsContext = createContext<ProjectsContextType | undefined>(undefined);
 
 export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [projects, setProjects] = useState<Project[]>(() => {
-    try {
-      const stored = localStorage.getItem(PROJECTS_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.error('Failed to load projects from localStorage', e);
-    }
-    return DEFAULT_PROJECTS;
-  });
+  const [projects, setProjects] = useState<Project[]>(DEFAULT_PROJECTS);
+  const [isLoading, setIsLoading] = useState(isSupabaseConfigured);
+  const [error, setError] = useState<string | null>(null);
 
-  // Save to localStorage on any change
+  const refreshProjects = useCallback(async () => {
+    if (!isSupabaseConfigured) {
+      setProjects(DEFAULT_PROJECTS);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    const { data, error: queryError } = await requireSupabase()
+      .from('projects')
+      .select('id, payload')
+      .order('created_at', { ascending: false });
+
+    if (queryError) {
+      setError(queryError.message);
+      setIsLoading(false);
+      return;
+    }
+
+    setProjects((data ?? []).map((row) => ({ ...(row.payload as Omit<Project, 'id'>), id: row.id })));
+    setError(null);
+    setIsLoading(false);
+  }, []);
+
   useEffect(() => {
-    try {
-      localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projects));
-    } catch (e) {
-      console.error('Failed to persist projects to localStorage', e);
-    }
-  }, [projects]);
+    void refreshProjects();
+  }, [refreshProjects]);
 
-  const addProject = (projectData: Omit<Project, 'id'>): Project => {
-    const newId = `project-${Date.now()}`;
-    const newProject: Project = {
-      ...projectData,
-      id: newId,
-    };
-
-    setProjects((prev) => [newProject, ...prev]);
+  const addProject = async (projectData: Omit<Project, 'id'>) => {
+    const newProject: Project = { ...projectData, id: crypto.randomUUID() };
+    const { error: insertError } = await requireSupabase().from('projects').insert({
+      id: newProject.id,
+      payload: projectData,
+    });
+    if (insertError) throw new Error(insertError.message);
+    setProjects((previous) => [newProject, ...previous]);
     return newProject;
   };
 
-  const updateProject = (id: string, updatedData: Partial<Project>) => {
-    setProjects((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, ...updatedData } : item))
-    );
+  const updateProject = async (id: string, updatedData: Partial<Project>) => {
+    const current = projects.find((project) => project.id === id);
+    if (!current) throw new Error('Project not found.');
+    const nextProject = { ...current, ...updatedData, id };
+    const payload = Object.fromEntries(Object.entries(nextProject).filter(([key]) => key !== 'id'));
+    const { error: updateError } = await requireSupabase().from('projects').update({ payload }).eq('id', id);
+    if (updateError) throw new Error(updateError.message);
+    setProjects((previous) => previous.map((project) => (project.id === id ? nextProject : project)));
   };
 
-  const deleteProject = (id: string) => {
-    setProjects((prev) => prev.filter((item) => item.id !== id));
+  const deleteProject = async (id: string) => {
+    const { error: deleteError } = await requireSupabase().from('projects').delete().eq('id', id);
+    if (deleteError) throw new Error(deleteError.message);
+    setProjects((previous) => previous.filter((project) => project.id !== id));
   };
 
-  const resetToDefaults = () => {
+  const resetToDefaults = async () => {
+    const client = requireSupabase();
+    const { error: deleteError } = await client.from('projects').delete().neq('id', '');
+    if (deleteError) throw new Error(deleteError.message);
+    const seedRows = DEFAULT_PROJECTS.map(({ id, ...payload }) => ({ id, payload }));
+    const { error: insertError } = await client.from('projects').insert(seedRows);
+    if (insertError) throw new Error(insertError.message);
     setProjects(DEFAULT_PROJECTS);
-    try {
-      localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(DEFAULT_PROJECTS));
-    } catch {}
   };
 
-  const toggleFeatured = (id: string) => {
-    setProjects((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, featuredInHome: !item.featuredInHome } : item
-      )
-    );
-  };
-
-  const getProjectById = (id: string) => {
-    return projects.find((p) => p.id === id);
+  const toggleFeatured = async (id: string) => {
+    const current = projects.find((project) => project.id === id);
+    if (current) await updateProject(id, { featuredInHome: !current.featuredInHome });
   };
 
   return (
-    <ProjectsContext.Provider
-      value={{
-        projects,
-        addProject,
-        updateProject,
-        deleteProject,
-        resetToDefaults,
-        toggleFeatured,
-        getProjectById,
-      }}
-    >
+    <ProjectsContext.Provider value={{ projects, isLoading, error, addProject, updateProject, deleteProject, resetToDefaults, toggleFeatured, getProjectById: (id) => projects.find((project) => project.id === id), refreshProjects }}>
       {children}
     </ProjectsContext.Provider>
   );
@@ -100,8 +102,6 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
 export const useProjects = () => {
   const context = useContext(ProjectsContext);
-  if (!context) {
-    throw new Error('useProjects must be used within a ProjectsProvider');
-  }
+  if (!context) throw new Error('useProjects must be used within a ProjectsProvider');
   return context;
 };

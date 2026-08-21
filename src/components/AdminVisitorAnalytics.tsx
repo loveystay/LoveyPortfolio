@@ -75,9 +75,14 @@ export const AdminVisitorAnalytics: React.FC<AdminVisitorAnalyticsProps> = ({
             <span className="text-xs font-bold text-neutral-200">{analytics.lastVisitTime}</span>
           </div>
           <button
-            onClick={() => {
+            onClick={async () => {
               if (window.confirm('방문자 통계 데이터를 기본 기준값으로 초기화하시겠습니까?')) {
-                resetAnalytics();
+                try {
+                  await resetAnalytics();
+                } catch (error) {
+                  console.error('Analytics reset failed', error);
+                  alert(error instanceof Error ? error.message : '통계를 초기화하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+                }
               }
             }}
             title="통계 초기화"

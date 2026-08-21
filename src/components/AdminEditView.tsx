@@ -45,7 +45,7 @@ export const AdminEditView: React.FC<AdminEditViewProps> = ({
   onNavigateHome,
   onShowToast,
 }) => {
-  const { isAuthenticated, login, logout, defaultPasswordHint } = useAdminAuth();
+  const { isAuthenticated, isLoading: isAuthLoading, login, logout } = useAdminAuth();
   const { projects, addProject, updateProject, deleteProject, resetToDefaults, toggleFeatured } =
     useProjects();
   const { analytics } = useVisitorAnalytics();
@@ -55,8 +55,10 @@ export const AdminEditView: React.FC<AdminEditViewProps> = ({
 
   // Login form state
   const [passwordInput, setPasswordInput] = useState('');
+  const [emailInput, setEmailInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // Admin filter & search state
   const [activeCategory, setActiveCategory] = useState<string>('ALL');
@@ -68,15 +70,23 @@ export const AdminEditView: React.FC<AdminEditViewProps> = ({
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
-    const success = login(passwordInput);
-    if (success) {
-      onShowToast('관리자로 로그인되었습니다.');
-      setPasswordInput('');
-    } else {
-      setLoginError('비밀번호가 올바르지 않습니다. 다시 확인해 주세요.');
+    setIsLoggingIn(true);
+    try {
+      const success = await login(emailInput, passwordInput);
+      if (success) {
+        onShowToast('관리자로 로그인되었습니다.');
+        setPasswordInput('');
+      } else {
+        setLoginError('이메일, 비밀번호 또는 관리자 권한을 확인해 주세요.');
+      }
+    } catch (error) {
+      console.error('Admin login failed', error);
+      setLoginError(error instanceof Error ? error.message : '로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -90,28 +100,48 @@ export const AdminEditView: React.FC<AdminEditViewProps> = ({
     setIsEditorOpen(true);
   };
 
-  const handleSaveProject = (projectData: Omit<Project, 'id'>, id?: string) => {
+  const handleSaveProject = async (projectData: Omit<Project, 'id'>, id?: string) => {
     if (id) {
-      updateProject(id, projectData);
+      await updateProject(id, projectData);
       onShowToast(`'${projectData.title}' 프로젝트가 수정되었습니다.`);
     } else {
-      const created = addProject(projectData);
+      const created = await addProject(projectData);
       onShowToast(`새 프로젝트 '${created.title}'이(가) 등록되었습니다.`);
     }
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (projectToDelete) {
-      deleteProject(projectToDelete.id);
-      onShowToast(`'${projectToDelete.title}' 프로젝트가 삭제되었습니다.`);
-      setProjectToDelete(null);
+      try {
+        await deleteProject(projectToDelete.id);
+        onShowToast(`'${projectToDelete.title}' 프로젝트가 삭제되었습니다.`);
+        setProjectToDelete(null);
+      } catch (error) {
+        console.error('Project delete failed', error);
+        onShowToast(error instanceof Error ? error.message : '프로젝트를 삭제하지 못했습니다.');
+      }
     }
   };
 
-  const handleResetDefaults = () => {
+  const handleResetDefaults = async () => {
     if (window.confirm('기본 샘플 6개 프로젝트 데이터로 초기화하시겠습니까? (수정/추가된 데이터가 기본값으로 리셋됩니다)')) {
-      resetToDefaults();
-      onShowToast('기본 프로젝트 데이터로 복원되었습니다.');
+      try {
+        await resetToDefaults();
+        onShowToast('기본 프로젝트 데이터로 복원되었습니다.');
+      } catch (error) {
+        console.error('Project reset failed', error);
+        onShowToast(error instanceof Error ? error.message : '기본 프로젝트를 복원하지 못했습니다.');
+      }
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      onShowToast('관리자에서 로그아웃되었습니다.');
+    } catch (error) {
+      console.error('Admin logout failed', error);
+      onShowToast(error instanceof Error ? error.message : '로그아웃하지 못했습니다.');
     }
   };
 
@@ -141,6 +171,10 @@ export const AdminEditView: React.FC<AdminEditViewProps> = ({
   const youtubeCount = projects.filter((p) => p.category === 'YOUTUBE VIDEO' || p.category === 'VIDEO EDITING').length;
   const shortsCount = projects.filter((p) => p.category === 'SHORTS / REELS' || p.categoryTag === 'SHORTS').length;
   const productCount = projects.filter((p) => p.category === 'PRODUCT PAGE' || p.categoryTag === 'PRODUCT').length;
+
+  if (isAuthLoading) {
+    return <div className="relative z-10 mx-auto flex min-h-[70vh] max-w-7xl items-center justify-center px-6 py-20 text-sm font-medium text-neutral-500">관리자 세션을 확인하는 중입니다…</div>;
+  }
 
   // 1. Unauthenticated Login Screen
   if (!isAuthenticated) {
@@ -176,6 +210,21 @@ export const AdminEditView: React.FC<AdminEditViewProps> = ({
 
             <div>
               <label className="block text-xs font-bold tracking-wider text-neutral-700 uppercase mb-1.5">
+                Admin email
+              </label>
+              <input
+                type="email"
+                required
+                autoComplete="email"
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                placeholder="admin@example.com"
+                className="w-full rounded-xl border border-neutral-200 bg-neutral-50/50 px-4 py-3 text-sm text-neutral-900 focus:border-blue-600 focus:bg-white focus:outline-none transition font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold tracking-wider text-neutral-700 uppercase mb-1.5">
                 관리자 비밀번호
               </label>
               <div className="relative">
@@ -197,23 +246,12 @@ export const AdminEditView: React.FC<AdminEditViewProps> = ({
               </div>
             </div>
 
-            {/* Quick Helper Badge */}
-            <div className="flex items-center justify-between rounded-xl bg-neutral-50 p-2.5 text-[11px] text-neutral-500 border border-neutral-100">
-              <span>초기 기본 비밀번호: <strong className="font-mono text-neutral-800">{defaultPasswordHint}</strong></span>
-              <button
-                type="button"
-                onClick={() => setPasswordInput(defaultPasswordHint)}
-                className="text-blue-600 font-bold hover:underline cursor-pointer"
-              >
-                자동 입력
-              </button>
-            </div>
-
             <button
               type="submit"
+              disabled={isLoggingIn}
               className="w-full rounded-xl bg-blue-600 py-3 text-xs font-bold tracking-wider text-white uppercase shadow-md hover:bg-blue-700 transition cursor-pointer flex items-center justify-center gap-2"
             >
-              <span>관리자 모드로 입장</span>
+              <span>{isLoggingIn ? '로그인 중…' : '관리자 모드로 입장'}</span>
               <ArrowRight size={15} />
             </button>
 
@@ -221,7 +259,7 @@ export const AdminEditView: React.FC<AdminEditViewProps> = ({
             <div className="pt-2 text-center border-t border-neutral-100 mt-4">
               <button
                 type="button"
-                onClick={() => setIsPasswordModalOpen(true)}
+                onClick={() => setLoginError('Sign in before changing your password.')}
                 className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-900 transition cursor-pointer"
               >
                 <Key size={13} />
@@ -298,10 +336,7 @@ export const AdminEditView: React.FC<AdminEditViewProps> = ({
           </button>
 
           <button
-            onClick={() => {
-              logout();
-              onShowToast('관리자에서 로그아웃되었습니다.');
-            }}
+            onClick={() => void handleLogout()}
             className="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-neutral-100 px-3.5 py-2.5 text-xs font-bold text-neutral-600 hover:bg-neutral-200 transition cursor-pointer"
           >
             <LogOut size={13} />

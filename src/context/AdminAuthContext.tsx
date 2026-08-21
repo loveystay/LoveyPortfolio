@@ -1,90 +1,78 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { isSupabaseConfigured, requireSupabase } from '../lib/supabase';
 
 interface AdminAuthContextType {
   isAuthenticated: boolean;
-  login: (password: string) => boolean;
-  logout: () => void;
-  changePassword: (oldPass: string, newPass: string) => { success: boolean; message: string };
-  defaultPasswordHint: string;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<boolean>;
+  logout: () => Promise<void>;
+  changePassword: (oldPass: string, newPass: string) => Promise<{ success: boolean; message: string }>;
 }
-
-const DEFAULT_ADMIN_PASSWORD = 'lovey2026!';
-const AUTH_STORAGE_KEY = 'lovey_admin_authenticated';
-const PASS_STORAGE_KEY = 'lovey_admin_password';
 
 const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
 
 export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem(AUTH_STORAGE_KEY) === 'true';
-    } catch {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(isSupabaseConfigured);
+
+  const resolveAdminRole = async (userId?: string) => {
+    if (!userId) {
+      setIsAuthenticated(false);
+      setIsLoading(false);
       return false;
     }
-  });
-
-  const getStoredPassword = (): string => {
-    try {
-      return localStorage.getItem(PASS_STORAGE_KEY) || DEFAULT_ADMIN_PASSWORD;
-    } catch {
-      return DEFAULT_ADMIN_PASSWORD;
-    }
+    const { data, error } = await requireSupabase().from('profiles').select('role').eq('id', userId).maybeSingle();
+    const isAdmin = !error && data?.role === 'admin';
+    setIsAuthenticated(isAdmin);
+    setIsLoading(false);
+    return isAdmin;
   };
 
-  const login = (inputPassword: string): boolean => {
-    const currentPass = getStoredPassword();
-    if (inputPassword === currentPass) {
-      setIsAuthenticated(true);
-      try {
-        localStorage.setItem(AUTH_STORAGE_KEY, 'true');
-      } catch {}
-      return true;
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setIsLoading(false);
+      return;
     }
-    return false;
+    const client = requireSupabase();
+    void client.auth.getSession().then(({ data }) => void resolveAdminRole(data.session?.user.id));
+    const { data: listener } = client.auth.onAuthStateChange((_event, session) => {
+      void resolveAdminRole(session?.user.id);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    const client = requireSupabase();
+    const { data, error } = await client.auth.signInWithPassword({ email, password });
+    if (error || !data.user) return false;
+    const isAdmin = await resolveAdminRole(data.user.id);
+    if (!isAdmin) await client.auth.signOut();
+    return isAdmin;
   };
 
-  const logout = () => {
-    setIsAuthenticated(false);
-    try {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-    } catch {}
+  const logout = async () => {
+    const { error } = await requireSupabase().auth.signOut();
+    if (error) throw new Error(error.message);
   };
 
-  const changePassword = (oldPass: string, newPass: string): { success: boolean; message: string } => {
-    const currentPass = getStoredPassword();
-    if (oldPass !== currentPass) {
-      return { success: false, message: '현재 비밀번호가 일치하지 않습니다.' };
-    }
-    if (!newPass || newPass.trim().length < 4) {
-      return { success: false, message: '새 비밀번호는 최소 4자 이상이어야 합니다.' };
-    }
-    try {
-      localStorage.setItem(PASS_STORAGE_KEY, newPass.trim());
-      return { success: true, message: '비밀번호가 성공적으로 변경되었습니다.' };
-    } catch {
-      return { success: false, message: '비밀번호 저장 중 오류가 발생했습니다.' };
-    }
+  const changePassword = async (oldPass: string, newPass: string) => {
+    const client = requireSupabase();
+    const { data: userData } = await client.auth.getUser();
+    const email = userData.user?.email;
+    if (!email) return { success: false, message: 'No authenticated administrator session.' };
+    const { error: verifyError } = await client.auth.signInWithPassword({ email, password: oldPass });
+    if (verifyError) return { success: false, message: 'Current password is incorrect.' };
+    const { error: updateError } = await client.auth.updateUser({ password: newPass });
+    return updateError
+      ? { success: false, message: updateError.message }
+      : { success: true, message: 'Password updated.' };
   };
 
-  return (
-    <AdminAuthContext.Provider
-      value={{
-        isAuthenticated,
-        login,
-        logout,
-        changePassword,
-        defaultPasswordHint: DEFAULT_ADMIN_PASSWORD,
-      }}
-    >
-      {children}
-    </AdminAuthContext.Provider>
-  );
+  return <AdminAuthContext.Provider value={{ isAuthenticated, isLoading, login, logout, changePassword }}>{children}</AdminAuthContext.Provider>;
 };
 
 export const useAdminAuth = () => {
   const context = useContext(AdminAuthContext);
-  if (!context) {
-    throw new Error('useAdminAuth must be used within an AdminAuthProvider');
-  }
+  if (!context) throw new Error('useAdminAuth must be used within an AdminAuthProvider');
   return context;
 };

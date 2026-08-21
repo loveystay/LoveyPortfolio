@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { isSupabaseConfigured, requireSupabase, supabase } from '../lib/supabase';
 
 export interface DailyVisitStat {
-  date: string; // YYYY-MM-DD
-  dayLabel: string; // e.g. "8/15 (토)"
+  date: string;
+  dayLabel: string;
   visitors: number;
   pageViews: number;
 }
@@ -24,193 +25,143 @@ interface VisitorAnalyticsContextType {
   analytics: VisitorAnalyticsData;
   recordPageView: (tabName?: string) => void;
   recordProjectView: (projectId: string) => void;
-  resetAnalytics: () => void;
+  resetAnalytics: () => Promise<void>;
+  refreshAnalytics: () => Promise<void>;
 }
 
-const STORAGE_KEY = 'lovey_visitor_analytics_v1';
-const SESSION_VISITED_KEY = 'lovey_session_recorded';
-
-const generateInitialStats = (): VisitorAnalyticsData => {
-  const today = new Date();
-  const dailyStats: DailyVisitStat[] = [];
-  const days = ['일', '월', '화', '수', '목', '금', '토'];
-
-  // Generate realistic past 7 days stats
-  const baseCounts = [28, 34, 45, 39, 52, 61, 48];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(today.getDate() - i);
-    const dateStr = d.toISOString().split('T')[0];
-    const month = d.getMonth() + 1;
-    const dateNum = d.getDate();
-    const dayName = days[d.getDay()];
-    const dayLabel = `${month}/${dateNum} (${dayName})`;
-    const count = baseCounts[6 - i] + Math.floor(Math.random() * 5);
-    dailyStats.push({
-      date: dateStr,
-      dayLabel,
-      visitors: count,
-      pageViews: Math.round(count * 2.8),
-    });
-  }
-
-  const todayStat = dailyStats[dailyStats.length - 1];
-  const yesterdayStat = dailyStats[dailyStats.length - 2];
-
-  return {
-    totalVisitors: 1428,
-    todayVisitors: todayStat ? todayStat.visitors : 48,
-    yesterdayVisitors: yesterdayStat ? yesterdayStat.visitors : 61,
-    totalPageViews: 3892,
-    todayPageViews: todayStat ? todayStat.pageViews : 134,
-    desktopCount: 885,
-    mobileCount: 543,
-    dailyStats,
-    projectViews: {
-      '1': 412,
-      '2': 365,
-      '3': 298,
-      '4': 245,
-      '5': 210,
-      '6': 189,
-    },
-    lastVisitTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-  };
+type AnalyticsEvent = {
+  event_type: 'visit' | 'page_view' | 'project_view';
+  project_id: string | null;
+  device_type: 'desktop' | 'mobile';
+  session_id: string;
+  created_at: string;
 };
+
+const emptyAnalytics = (): VisitorAnalyticsData => ({
+  totalVisitors: 0,
+  todayVisitors: 0,
+  yesterdayVisitors: 0,
+  totalPageViews: 0,
+  todayPageViews: 0,
+  desktopCount: 0,
+  mobileCount: 0,
+  dailyStats: [],
+  projectViews: {},
+  lastVisitTime: '-',
+});
+
+const dayKey = (date: Date) => date.toISOString().slice(0, 10);
+const sessionKey = 'lovey_analytics_session_id';
+const visitedKey = 'lovey_analytics_session_visited';
 
 const VisitorAnalyticsContext = createContext<VisitorAnalyticsContextType | undefined>(undefined);
 
 export const VisitorAnalyticsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [analytics, setAnalytics] = useState<VisitorAnalyticsData>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch {
-      // Fallback
+  const [analytics, setAnalytics] = useState<VisitorAnalyticsData>(emptyAnalytics);
+
+  const refreshAnalytics = useCallback(async () => {
+    if (!isSupabaseConfigured) return;
+    const client = requireSupabase();
+    const { data: sessionData } = await client.auth.getSession();
+    if (!sessionData.session) return;
+    const { data, error } = await client
+      .from('analytics_events')
+      .select('event_type, project_id, device_type, session_id, created_at')
+      .order('created_at', { ascending: true });
+    if (error) {
+      console.error('Unable to load analytics:', error.message);
+      return;
     }
-    return generateInitialStats();
-  });
 
-  // Track new session / visit on initial mount
-  useEffect(() => {
-    try {
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        navigator.userAgent
-      );
-      const isNewSession = !sessionStorage.getItem(SESSION_VISITED_KEY);
+    const events = (data ?? []) as AnalyticsEvent[];
+    const today = new Date();
+    const days = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date();
+      date.setDate(today.getDate() - (6 - index));
+      return date;
+    });
+    const daily = new Map(days.map((date) => [dayKey(date), { date: dayKey(date), dayLabel: new Intl.DateTimeFormat('ko-KR', { month: 'numeric', day: 'numeric', weekday: 'short' }).format(date), visitors: 0, pageViews: 0, visitorSessions: new Set<string>() }]));
+    const visitorSessions = new Set<string>();
+    const desktopSessions = new Set<string>();
+    const mobileSessions = new Set<string>();
+    const projectViews: Record<string, number> = {};
+    let totalPageViews = 0;
 
-      setAnalytics((prev) => {
-        const todayStr = new Date().toISOString().split('T')[0];
-        const days = ['일', '월', '화', '수', '목', '금', '토'];
-        const now = new Date();
-        const dayLabel = `${now.getMonth() + 1}/${now.getDate()} (${days[now.getDay()]})`;
-
-        const updatedDaily = [...prev.dailyStats];
-        let todayItem = updatedDaily.find((s) => s.date === todayStr);
-
-        if (!todayItem) {
-          todayItem = {
-            date: todayStr,
-            dayLabel,
-            visitors: 0,
-            pageViews: 0,
-          };
-          updatedDaily.push(todayItem);
-          if (updatedDaily.length > 14) {
-            updatedDaily.shift();
-          }
+    for (const event of events) {
+      const key = event.created_at.slice(0, 10);
+      const stat = daily.get(key);
+      if (event.event_type === 'visit') {
+        visitorSessions.add(event.session_id);
+        if (event.device_type === 'mobile') mobileSessions.add(event.session_id);
+        else desktopSessions.add(event.session_id);
+        if (stat) stat.visitorSessions.add(event.session_id);
+      } else {
+        totalPageViews += 1;
+        if (stat) stat.pageViews += 1;
+        if (event.event_type === 'project_view' && event.project_id) {
+          projectViews[event.project_id] = (projectViews[event.project_id] ?? 0) + 1;
         }
-
-        const addVisitor = isNewSession ? 1 : 0;
-        todayItem.visitors += addVisitor;
-        todayItem.pageViews += 1;
-
-        const nextState: VisitorAnalyticsData = {
-          ...prev,
-          totalVisitors: prev.totalVisitors + addVisitor,
-          todayVisitors: prev.todayVisitors + addVisitor,
-          totalPageViews: prev.totalPageViews + 1,
-          todayPageViews: prev.todayPageViews + 1,
-          desktopCount: prev.desktopCount + (!isMobile && isNewSession ? 1 : 0),
-          mobileCount: prev.mobileCount + (isMobile && isNewSession ? 1 : 0),
-          dailyStats: updatedDaily,
-          lastVisitTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-        };
-
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
-        return nextState;
-      });
-
-      if (isNewSession) {
-        sessionStorage.setItem(SESSION_VISITED_KEY, 'true');
       }
-    } catch {
-      // Ignore
     }
+
+    const dailyStats = Array.from(daily.values()).map(({ visitorSessions: sessions, ...stat }) => ({ ...stat, visitors: sessions.size }));
+    const todayStat = dailyStats.at(-1) ?? { visitors: 0, pageViews: 0 };
+    const yesterdayStat = dailyStats.at(-2) ?? { visitors: 0 };
+    setAnalytics({
+      totalVisitors: visitorSessions.size,
+      todayVisitors: todayStat.visitors,
+      yesterdayVisitors: yesterdayStat.visitors,
+      totalPageViews,
+      todayPageViews: todayStat.pageViews,
+      desktopCount: desktopSessions.size,
+      mobileCount: mobileSessions.size,
+      dailyStats,
+      projectViews,
+      lastVisitTime: events.at(-1) ? new Date(events.at(-1)!.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '-',
+    });
   }, []);
 
-  const recordPageView = (_tabName?: string) => {
-    setAnalytics((prev) => {
-      const nextState = {
-        ...prev,
-        totalPageViews: prev.totalPageViews + 1,
-        todayPageViews: prev.todayPageViews + 1,
-      };
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
-      } catch {}
-      return nextState;
+  const record = useCallback((eventType: AnalyticsEvent['event_type'], projectId?: string, tabName?: string) => {
+    if (!isSupabaseConfigured) return;
+    let sessionId = sessionStorage.getItem(sessionKey);
+    if (!sessionId) {
+      sessionId = crypto.randomUUID();
+      sessionStorage.setItem(sessionKey, sessionId);
+    }
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    void requireSupabase().from('analytics_events').insert({
+      event_type: eventType,
+      project_id: projectId ?? null,
+      page_name: tabName ?? null,
+      device_type: isMobile ? 'mobile' : 'desktop',
+      session_id: sessionId,
+    }).then(({ error }) => {
+      if (error) console.error('Unable to record analytics event:', error.message);
     });
+  }, []);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    if (!sessionStorage.getItem(visitedKey)) {
+      record('visit');
+      sessionStorage.setItem(visitedKey, 'true');
+    }
+    record('page_view', undefined, 'home');
+    const { data: listener } = supabase!.auth.onAuthStateChange(() => void refreshAnalytics());
+    return () => listener.subscription.unsubscribe();
+  }, [record, refreshAnalytics]);
+
+  const resetAnalytics = async () => {
+    const { error } = await requireSupabase().from('analytics_events').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (error) throw new Error(error.message);
+    setAnalytics(emptyAnalytics());
   };
 
-  const recordProjectView = (projectId: string) => {
-    setAnalytics((prev) => {
-      const currentViews = prev.projectViews[projectId] || 0;
-      const nextViews = {
-        ...prev.projectViews,
-        [projectId]: currentViews + 1,
-      };
-      const nextState = {
-        ...prev,
-        totalPageViews: prev.totalPageViews + 1,
-        todayPageViews: prev.todayPageViews + 1,
-        projectViews: nextViews,
-      };
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
-      } catch {}
-      return nextState;
-    });
-  };
-
-  const resetAnalytics = () => {
-    const initial = generateInitialStats();
-    setAnalytics(initial);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
-    } catch {}
-  };
-
-  return (
-    <VisitorAnalyticsContext.Provider
-      value={{
-        analytics,
-        recordPageView,
-        recordProjectView,
-        resetAnalytics,
-      }}
-    >
-      {children}
-    </VisitorAnalyticsContext.Provider>
-  );
+  return <VisitorAnalyticsContext.Provider value={{ analytics, recordPageView: (tabName) => record('page_view', undefined, tabName), recordProjectView: (projectId) => record('project_view', projectId), resetAnalytics, refreshAnalytics }}>{children}</VisitorAnalyticsContext.Provider>;
 };
 
 export const useVisitorAnalytics = () => {
   const context = useContext(VisitorAnalyticsContext);
-  if (!context) {
-    throw new Error('useVisitorAnalytics must be used within a VisitorAnalyticsProvider');
-  }
+  if (!context) throw new Error('useVisitorAnalytics must be used within a VisitorAnalyticsProvider');
   return context;
 };

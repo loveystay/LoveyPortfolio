@@ -21,12 +21,13 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { changePassword } = useAdminAuth();
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
@@ -40,15 +41,23 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       return;
     }
 
-    const res = changePassword(currentPassword, newPassword);
-    if (res.success) {
-      onSuccessToast('관리자 비밀번호가 성공적으로 변경되었습니다!');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      onClose();
-    } else {
-      setErrorMessage(res.message);
+    setIsSubmitting(true);
+    try {
+      const res = await changePassword(currentPassword, newPassword);
+      if (res.success) {
+        onSuccessToast('관리자 비밀번호가 성공적으로 변경되었습니다!');
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        onClose();
+      } else {
+        setErrorMessage(res.message);
+      }
+    } catch (error) {
+      console.error('Password update failed', error);
+      setErrorMessage(error instanceof Error ? error.message : '비밀번호를 변경하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -184,15 +193,17 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
+                disabled={isSubmitting}
                 className="rounded-full border border-neutral-300 px-4 py-2 text-xs font-bold text-neutral-700 hover:bg-neutral-50 cursor-pointer"
               >
                 취소
               </button>
               <button
                 type="submit"
+                disabled={isSubmitting}
                 className="rounded-full bg-emerald-600 px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition cursor-pointer"
               >
-                비밀번호 변경 완료
+                {isSubmitting ? '변경 중…' : '비밀번호 변경 완료'}
               </button>
             </div>
           </form>

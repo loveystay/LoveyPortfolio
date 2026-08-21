@@ -23,12 +23,14 @@ import {
   Smartphone
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { requireSupabase } from '../lib/supabase';
+import { uploadPortfolioAsset } from '../lib/storage';
 
 interface ProjectEditorModalProps {
   isOpen: boolean;
   projectToEdit: Project | null;
   onClose: () => void;
-  onSave: (projectData: Omit<Project, 'id'>, id?: string) => void;
+  onSave: (projectData: Omit<Project, 'id'>, id?: string) => Promise<void>;
 }
 
 const PRESET_VIDEO_IMAGES = [
@@ -98,6 +100,7 @@ export const ProjectEditorModal: React.FC<ProjectEditorModalProps> = ({
   } | null>(null);
   const [showAiAssistant, setShowAiAssistant] = useState(false);
   const [aiSuccessMsg, setAiSuccessMsg] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [activeTab, setActiveTab] = useState<'form' | 'preview'>('form');
 
@@ -216,10 +219,8 @@ export const ProjectEditorModal: React.FC<ProjectEditorModalProps> = ({
     setIsGeneratingAI(true);
     setAiSuccessMsg(null);
     try {
-      const response = await fetch('/api/ai-suggest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const { data, error } = await requireSupabase().functions.invoke('ai-suggest', {
+        body: {
           title,
           category,
           client,
@@ -227,10 +228,10 @@ export const ProjectEditorModal: React.FC<ProjectEditorModalProps> = ({
           productCategory: isProductPage ? productCategory : undefined,
           roughNotes: roughNotes.trim() || description || title || (isProductPage ? '이커머스 상세페이지 기획 디자인' : '전문적인 영상 편집 작업'),
           targetField: targetField || 'all',
-        }),
+        },
       });
 
-      const data = await response.json();
+      if (error) throw error;
       if (data && data.result) {
         if (targetField === 'description' && typeof data.result === 'string') {
           setDescription(data.result);
@@ -321,7 +322,7 @@ export const ProjectEditorModal: React.FC<ProjectEditorModalProps> = ({
 
   const categoryTag = isProductPage ? 'PRODUCT' : isShorts ? 'SHORTS' : 'VIDEO';
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
       alert(isProductPage ? '상품명 / 프로젝트 제목을 입력해 주세요.' : '영상 제목을 입력해 주세요.');
@@ -354,8 +355,16 @@ export const ProjectEditorModal: React.FC<ProjectEditorModalProps> = ({
       detailSections: isProductPage && detailSections.length > 0 ? detailSections : undefined,
     };
 
-    onSave(projectData, projectToEdit?.id);
-    onClose();
+    setIsSaving(true);
+    try {
+      await onSave(projectData, projectToEdit?.id);
+      onClose();
+    } catch (error) {
+      console.error('Project save failed', error);
+      alert(error instanceof Error ? error.message : '프로젝트를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -646,6 +655,25 @@ export const ProjectEditorModal: React.FC<ProjectEditorModalProps> = ({
                     placeholder="https://..."
                     className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-medium text-neutral-900 focus:border-blue-600 focus:outline-none transition shadow-2xs mb-2"
                   />
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[11px] font-bold text-neutral-700 hover:bg-neutral-50">
+                    Upload image to Supabase Storage
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (event) => {
+                        const file = event.target.files?.[0];
+                        if (!file) return;
+                        try {
+                          setImage(await uploadPortfolioAsset(file));
+                        } catch (error) {
+                          alert(error instanceof Error ? error.message : 'Image upload failed.');
+                        } finally {
+                          event.target.value = '';
+                        }
+                      }}
+                    />
+                  </label>
 
                   {/* Preset Image Pills */}
                   <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
@@ -1182,12 +1210,14 @@ export const ProjectEditorModal: React.FC<ProjectEditorModalProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
+                  disabled={isSaving}
                   className="rounded-full border border-neutral-300 px-6 py-2.5 text-xs font-bold tracking-wider text-neutral-700 uppercase hover:bg-neutral-50 transition cursor-pointer"
                 >
                   취소
                 </button>
                 <button
                   type="submit"
+                  disabled={isSaving}
                   className={`rounded-full px-7 py-2.5 text-xs font-bold tracking-wider text-white uppercase shadow-md transition cursor-pointer flex items-center gap-2 ${
                     isProductPage
                       ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
@@ -1195,7 +1225,7 @@ export const ProjectEditorModal: React.FC<ProjectEditorModalProps> = ({
                   }`}
                 >
                   <Check size={15} />
-                  <span>{projectToEdit ? '수정 내용 저장' : '새 프로젝트 등록'}</span>
+                  <span>{isSaving ? '저장 중…' : projectToEdit ? '수정 내용 저장' : '새 프로젝트 등록'}</span>
                 </button>
               </div>
             </form>
