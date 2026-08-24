@@ -35,6 +35,18 @@ interface AIConsultantModalProps {
   onOpenProject: (project: Project) => void;
 }
 
+const MAX_CHAT_REQUESTS = 20;
+const CHAT_USAGE_STORAGE_KEY = 'lovey-ai-consultation-used';
+
+const getInitialRemainingRequests = () => {
+  if (typeof window === 'undefined') return MAX_CHAT_REQUESTS;
+  const storedUsage = Number.parseInt(sessionStorage.getItem(CHAT_USAGE_STORAGE_KEY) ?? '0', 10);
+  const safeUsage = Number.isFinite(storedUsage)
+    ? Math.min(Math.max(storedUsage, 0), MAX_CHAT_REQUESTS)
+    : 0;
+  return MAX_CHAT_REQUESTS - safeUsage;
+};
+
 export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
   isOpen,
   onClose,
@@ -47,6 +59,7 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [remainingRequests, setRemainingRequests] = useState(getInitialRemainingRequests);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const sliderRef = useRef<HTMLDivElement>(null);
@@ -69,6 +82,9 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
       mailHistory: '상담 내용',
       failed: '답변을 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.',
       networkError: `일시적인 통신 오류가 발생했습니다. ${email}으로 문의해 주세요.`,
+      usageInfo: '이번 상담에서 AI 답변은 최대 20회까지 가능합니다.',
+      remaining: '남은 횟수',
+      limitReached: 'AI 상담 20회를 모두 사용했습니다.',
     },
     en: {
       recommended: 'Recommended work',
@@ -79,6 +95,9 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
       mailHistory: 'Consultation details',
       failed: 'Failed to retrieve a response. Please try again.',
       networkError: `A temporary network issue occurred. Please contact ${email}.`,
+      usageInfo: 'You can request up to 20 AI replies in this consultation.',
+      remaining: 'Remaining',
+      limitReached: 'You have used all 20 AI consultation requests.',
     },
     ja: {
       recommended: 'おすすめの実績',
@@ -89,6 +108,9 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
       mailHistory: '相談内容',
       failed: '回答を取得できませんでした。もう一度お試しください。',
       networkError: `一時的な通信エラーが発生しました。${email}までお問い合わせください。`,
+      usageInfo: 'この相談ではAI回答を最大20回まで利用できます。',
+      remaining: '残り回数',
+      limitReached: 'AI相談20回をすべて使用しました。',
     },
   }[language];
 
@@ -200,6 +222,17 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
   const handleSendMessage = async (textToSend?: string) => {
     const query = (textToSend || inputValue).trim();
     if (!query || isLoading) return;
+    if (remainingRequests <= 0) {
+      onShowToast(localText.limitReached);
+      return;
+    }
+
+    const nextRemainingRequests = remainingRequests - 1;
+    setRemainingRequests(nextRemainingRequests);
+    sessionStorage.setItem(
+      CHAT_USAGE_STORAGE_KEY,
+      String(MAX_CHAT_REQUESTS - nextRemainingRequests),
+    );
 
     const timeLocale = language === 'ko' ? 'ko-KR' : language === 'ja' ? 'ja-JP' : 'en-US';
     const userMsg: Message = {
@@ -535,7 +568,7 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
                         handleSendMessage(q);
                       }
                     }}
-                    disabled={isLoading}
+                    disabled={isLoading || remainingRequests <= 0}
                     className="shrink-0 rounded-full border border-neutral-200/90 bg-neutral-50/90 px-3.5 py-1.5 text-xs text-neutral-700 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 active:scale-98 transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5 text-left shadow-2xs whitespace-nowrap"
                   >
                     <span>{q}</span>
@@ -570,20 +603,38 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                placeholder={t.aiConsultant.placeholder}
-                disabled={isLoading}
+                placeholder={remainingRequests <= 0 ? localText.limitReached : t.aiConsultant.placeholder}
+                disabled={isLoading || remainingRequests <= 0}
                 maxLength={1000}
                 className="flex-1 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs sm:text-sm text-neutral-900 placeholder-neutral-400 focus:border-blue-600 focus:bg-white focus:outline-none transition disabled:opacity-60"
               />
               <button
                 type="submit"
-                disabled={isLoading || !inputValue.trim()}
+                disabled={isLoading || remainingRequests <= 0 || !inputValue.trim()}
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-md hover:bg-blue-700 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
                 aria-label={t.aiConsultant.send}
               >
                 <Send size={16} />
               </button>
             </form>
+
+            <div
+              className="mt-2 flex items-center justify-between gap-3 px-1 text-[10px] text-neutral-500"
+              aria-live="polite"
+            >
+              <span className="truncate">{localText.usageInfo}</span>
+              <span
+                className={`shrink-0 rounded-full px-2 py-0.5 font-bold ${
+                  remainingRequests <= 0
+                    ? 'bg-red-50 text-red-600'
+                    : remainingRequests <= 5
+                    ? 'bg-amber-50 text-amber-700'
+                    : 'bg-blue-50 text-blue-600'
+                }`}
+              >
+                {localText.remaining} {remainingRequests}/{MAX_CHAT_REQUESTS}
+              </span>
+            </div>
 
             {/* Bottom Contact Pill */}
             <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-0 pt-2 border-t border-neutral-100 text-[11px] text-neutral-500">
