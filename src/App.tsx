@@ -437,6 +437,11 @@ export default function App() {
         isOpen={isAIConsultantOpen}
         onClose={() => setIsAIConsultantOpen(false)}
         onShowToast={handleShowToast}
+        projects={projects}
+        onOpenProject={(project) => {
+          setIsAIConsultantOpen(false);
+          handleOpenProject(project);
+        }}
       />
 
       {/* Anti-Screen-Capture Visual Shield Overlay (Instant Blackout to Ruin Mobile & PC Screenshots) */}

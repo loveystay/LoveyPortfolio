@@ -23,7 +23,7 @@ Deno.serve(async (request) => {
       return Response.json({ result: targetField === 'description' ? result.description : targetField === 'fullStory' ? result.fullStory : result }, { headers: corsHeaders });
     }
 
-    const model = Deno.env.get('GEMINI_MODEL') ?? 'gemini-2.5-flash';
+    const model = Deno.env.get('GEMINI_MODEL') ?? 'gemini-3.6-flash';
     const prompt = `Write Korean portfolio copy for a ${category} project. Title: ${title}. Client: ${String(body.client ?? '').slice(0, 160)}. Role: ${String(body.role ?? '').slice(0, 160)}. Notes: ${String(body.roughNotes ?? '').slice(0, 3000)}. Return only valid JSON with description (1-2 sentences), fullStory (2 short paragraphs), and highlights (3 strings). Do not invent performance metrics.`;
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
       method: 'POST',

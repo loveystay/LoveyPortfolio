@@ -11,8 +11,10 @@
    on conflict (id) do update set role = excluded.role;
    ```
 
-5. Set the Edge Function secrets: `supabase secrets set GEMINI_API_KEY=<key> GEMINI_MODEL=gemini-2.5-flash`.
+5. Set the Edge Function secrets: `supabase secrets set GEMINI_API_KEY=<key> GEMINI_MODEL=gemini-3.6-flash`.
 6. Deploy the functions: `supabase functions deploy chat` and `supabase functions deploy ai-suggest`.
 7. Sign in as the administrator and select **초기 복원** once to migrate the bundled project samples into PostgreSQL.
 
 The browser only receives the publishable key. Gemini credentials remain in Supabase Edge Function secrets.
+
+For local Edge Function development, the root `.env` may contain `GEMINI_API_KEY` and `GEMINI_MODEL`, then run `supabase functions serve --env-file .env`. A root `.env` is not uploaded automatically: production still requires `supabase secrets set` before deployment.
