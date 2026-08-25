@@ -1,0 +1,6 @@
+{
+  "name": "Lovey Portfolio",
+  "description": "Editorial design and video editing portfolio website for Lovey featuring curated selected works, case studies, and interactive contact experience.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
