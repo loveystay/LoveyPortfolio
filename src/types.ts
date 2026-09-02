@@ -32,6 +32,8 @@ export interface Project {
   tools?: string[];
   image: string;
   videoUrl?: string;
+  /** Preferred media shown when the project opens. */
+  mediaDisplay?: 'thumbnail' | 'youtube';
   isWide?: boolean;
   featuredInHome?: boolean;
   metrics?: ProjectMetric[];
