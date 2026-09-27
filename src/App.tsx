@@ -15,6 +15,7 @@ import { AdminEditView } from "./components/AdminEditView";
 import { ProjectModal } from "./components/ProjectModal";
 import { AIConsultantModal } from "./components/AIConsultantModal";
 import { Toast } from "./components/Toast";
+import { isSupabaseConfigured, requireSupabase } from "./lib/supabase";
 import {
   Eye,
   Layers,
@@ -28,30 +29,130 @@ import { motion, AnimatePresence } from "motion/react";
 
 export type WorksTestScenario = "all" | "empty" | "no-video" | "no-product";
 
+const normalizePath = (pathname: string) => pathname.replace(/\/+$/, "") || "/";
+
+const getActiveTabFromLocation = (): NavTab => {
+  if (normalizePath(window.location.pathname) === "/admin") return "admin";
+
+  const historyTab = window.history.state?.tab as NavTab | undefined;
+  return historyTab && ["home", "about", "works", "contact"].includes(historyTab)
+    ? historyTab
+    : "home";
+};
+
 export default function App() {
   const { projects } = useProjects();
   const { isAuthenticated } = useAdminAuth();
   const { recordPageView, recordProjectView } = useVisitorAnalytics();
-  const [activeTab, setActiveTab] = useState<NavTab>("home");
+  const [activeTab, setActiveTab] = useState<NavTab>(getActiveTabFromLocation);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [startModalWithVideo, setStartModalWithVideo] = useState(false);
   const [isAIConsultantOpen, setIsAIConsultantOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [testScenario, setTestScenario] = useState<WorksTestScenario>("all");
   const [isCaptureShieldActive, setIsCaptureShieldActive] = useState(false);
+  const [isHeroOpenForProjects, setIsHeroOpenForProjects] = useState(true);
+  const [isHeroStatusLoading, setIsHeroStatusLoading] = useState(isSupabaseConfigured);
+  const [isHeroStatusSaving, setIsHeroStatusSaving] = useState(false);
 
   const handleSelectTab = (tab: NavTab) => {
+    const currentPath = normalizePath(window.location.pathname);
+    const currentState =
+      typeof window.history.state === "object" && window.history.state !== null
+        ? window.history.state
+        : {};
+
+    if (tab === "admin") {
+      if (currentPath !== "/admin") {
+        window.history.replaceState(
+          { ...currentState, tab: activeTab },
+          "",
+          window.location.href,
+        );
+        window.history.pushState({ tab }, "", "/admin");
+      } else if (window.location.pathname !== "/admin") {
+        window.history.replaceState(
+          { ...currentState, tab },
+          "",
+          `/admin${window.location.search}${window.location.hash}`,
+        );
+      }
+    } else if (currentPath === "/admin") {
+      window.history.pushState({ tab }, "", "/");
+    } else {
+      window.history.replaceState(
+        { ...currentState, tab },
+        "",
+        window.location.href,
+      );
+    }
+
     setActiveTab(tab);
     recordPageView(tab);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+  const handleSelectTabRef = React.useRef(handleSelectTab);
+  handleSelectTabRef.current = handleSelectTab;
+  const recordPageViewRef = React.useRef(recordPageView);
+  recordPageViewRef.current = recordPageView;
 
-  // High-Security Secret Ghost Typing Listener
-  // User simply types "loveystudio" or "lovey77" anywhere on the screen (outside form inputs)
+  useEffect(() => {
+    const activeRouteTab = getActiveTabFromLocation();
+    const currentState =
+      typeof window.history.state === "object" && window.history.state !== null
+        ? window.history.state
+        : {};
+    const normalizedPath = normalizePath(window.location.pathname);
+    const url = `${normalizedPath}${window.location.search}${window.location.hash}`;
+
+    window.history.replaceState({ ...currentState, tab: activeRouteTab }, "", url);
+    if (window.location.pathname !== normalizedPath) setActiveTab(activeRouteTab);
+
+    const handlePopState = () => {
+      const tab = getActiveTabFromLocation();
+      setActiveTab(tab);
+      recordPageViewRef.current(tab);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setIsHeroStatusLoading(false);
+      return;
+    }
+
+    let isCurrent = true;
+    const loadHeroStatus = async () => {
+      const { data, error } = await requireSupabase()
+        .from("site_settings")
+        .select("value")
+        .eq("key", "hero_open_for_projects")
+        .maybeSingle();
+
+      if (!isCurrent) return;
+      if (error) {
+        console.error("Failed to load hero availability status:", error.message);
+      } else if (data) {
+        setIsHeroOpenForProjects(data.value !== false);
+      }
+      setIsHeroStatusLoading(false);
+    };
+
+    void loadHeroStatus();
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
+
+  // Secret Ghost Typing Listener
   useEffect(() => {
     let keyBuffer = "";
     let timer: NodeJS.Timeout | null = null;
-    const SECRET_SEQUENCES = ["loveystudio", "lovey77", "loveymaster"];
+    const SECRET_SEQUENCES = ["loveystudio", "loveymaster"];
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ignore when user is actively typing in input / textarea
@@ -75,7 +176,7 @@ export default function App() {
         for (const secret of SECRET_SEQUENCES) {
           if (keyBuffer.endsWith(secret)) {
             keyBuffer = "";
-            setActiveTab("admin");
+            handleSelectTabRef.current("admin");
             setToastMessage("관리자 보안 게이트가 열렸습니다.");
             break;
           }
@@ -102,7 +203,7 @@ export default function App() {
       const hash = window.location.hash.toLowerCase();
       const search = window.location.search.toLowerCase();
       if (hash === "#gate-lovey-77" || search.includes("access=lovey_master")) {
-        setActiveTab("admin");
+        handleSelectTabRef.current("admin");
         setToastMessage("보안 키 인증: 관리자 모드 진입");
       }
     };
@@ -290,6 +391,47 @@ export default function App() {
     setToastMessage(msg);
   };
 
+  const handleToggleHeroStatus = async () => {
+    if (!isAuthenticated || isHeroStatusLoading || isHeroStatusSaving) return;
+
+    const nextStatus = !isHeroOpenForProjects;
+    setIsHeroStatusSaving(true);
+    try {
+      const { error } = await requireSupabase()
+        .from("site_settings")
+        .upsert(
+          { key: "hero_open_for_projects", value: nextStatus },
+          { onConflict: "key" },
+        );
+      if (error) {
+        console.error("Failed to update hero availability status:", {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+        });
+        if (["PGRST204", "PGRST205", "42P01"].includes(error.code)) {
+          handleShowToast("Supabase 테이블 설정이 반영되지 않았습니다. 최신 마이그레이션을 적용해 주세요.");
+        } else if (error.code === "42501") {
+          handleShowToast("Supabase 수정 권한을 확인해 주세요. 최신 마이그레이션과 profiles의 admin 역할이 필요합니다.");
+        } else {
+          handleShowToast(`상태 변경 저장 실패 [${error.code}]: ${error.message}`);
+        }
+        return;
+      }
+
+      setIsHeroOpenForProjects(nextStatus);
+      handleShowToast(
+        nextStatus ? "프로젝트 문의 상태를 열었습니다." : "프로젝트 문의 상태를 닫았습니다.",
+      );
+    } catch (error) {
+      console.error("Failed to update hero availability status:", error);
+      handleShowToast("상태 변경 저장 중 연결 오류가 발생했습니다. 다시 시도해 주세요.");
+    } finally {
+      setIsHeroStatusSaving(false);
+    }
+  };
+
   // Derive current projects according to the selected test scenario
   const currentProjects = React.useMemo(() => {
     if (testScenario === "empty") return [];
@@ -334,6 +476,10 @@ export default function App() {
             <HeroSection
               onExploreWorks={() => handleSelectTab("works")}
               onGetInTouch={() => setIsAIConsultantOpen(true)}
+              isOpenForProjects={isHeroOpenForProjects}
+              canToggleStatus={isAuthenticated}
+              isStatusSaving={isHeroStatusLoading || isHeroStatusSaving}
+              onToggleStatus={handleToggleHeroStatus}
             />
 
             {/* Curated Selected Works matching Screenshot 1 */}
