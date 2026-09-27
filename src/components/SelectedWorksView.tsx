@@ -4,6 +4,7 @@ import { Play, ArrowRight, ArrowUpRight, Sparkles, Film, Image as ImageIcon, Rot
 import { motion } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
 import { WatermarkOverlay } from './WatermarkOverlay';
+import { getYouTubeThumbnailUrl } from '../lib/youtube';
 
 interface SelectedWorksViewProps {
   projects: Project[];
@@ -154,6 +155,10 @@ export const SelectedWorksView: React.FC<SelectedWorksViewProps> = ({
             const projectDesc = pTrans?.description || project.description;
             const projectClient = pTrans?.client || project.client || 'Portfolio Work';
             const projectDuration = pTrans?.duration || project.duration;
+            const projectImage =
+              project.mediaDisplay === 'youtube'
+                ? getYouTubeThumbnailUrl(project.videoUrl) || project.image
+                : project.image;
 
             return (
               <motion.div
@@ -169,7 +174,7 @@ export const SelectedWorksView: React.FC<SelectedWorksViewProps> = ({
                 <div>
                   <div className="relative aspect-16/10 w-full overflow-hidden rounded-xl bg-neutral-950">
                     <img
-                      src={project.image}
+                      src={projectImage}
                       alt={projectTitle}
                       loading="lazy"
                       referrerPolicy="no-referrer"

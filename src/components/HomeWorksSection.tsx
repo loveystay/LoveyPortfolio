@@ -4,6 +4,7 @@ import { Play, Film, Image as ImageIcon, Layers, RotateCcw, ArrowRight } from 'l
 import { motion } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
 import { WatermarkOverlay } from './WatermarkOverlay';
+import { getYouTubeThumbnailUrl } from '../lib/youtube';
 
 interface HomeWorksSectionProps {
   projects: Project[];
@@ -152,6 +153,10 @@ export const HomeWorksSection: React.FC<HomeWorksSectionProps> = ({
         <div className="mt-10 sm:mt-12 grid grid-cols-1 gap-x-8 gap-y-10 sm:gap-y-12 md:grid-cols-2">
           {filteredProjects.map((project, index) => {
             const isVideo = project.categoryTag === 'VIDEO' || project.categoryTag === 'SHORTS' || !!project.videoUrl;
+            const projectImage =
+              project.mediaDisplay === 'youtube'
+                ? getYouTubeThumbnailUrl(project.videoUrl) || project.image
+                : project.image;
             const pTrans = getProjectTranslation(project.id);
             const projectTitle = pTrans?.title || project.title;
             const projectDesc = pTrans?.description || project.description;
@@ -170,7 +175,7 @@ export const HomeWorksSection: React.FC<HomeWorksSectionProps> = ({
                 <div className="relative aspect-16/10 w-full overflow-hidden rounded-2xl bg-neutral-900 shadow-xs transition-shadow duration-200 group-hover:shadow-md border border-neutral-200/60">
                   {/* Image */}
                   <img
-                    src={project.image}
+                    src={projectImage}
                     alt={projectTitle}
                     loading="lazy"
                     referrerPolicy="no-referrer"

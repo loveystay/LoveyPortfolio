@@ -22,6 +22,83 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
+import { getYouTubeThumbnailUrl, getYouTubeVideoId } from '../lib/youtube';
+
+type YouTubePlayerState = {
+  getPlayerState: () => number;
+  getCurrentTime: () => number;
+  getDuration: () => number;
+  playVideo: () => void;
+  pauseVideo: () => void;
+  mute: () => void;
+  unMute: () => void;
+  seekTo: (seconds: number, allowSeekAhead: boolean) => void;
+  destroy: () => void;
+  getIframe: () => HTMLIFrameElement;
+};
+
+type YouTubePlayerOptions = {
+  videoId: string;
+  playerVars?: Record<string, number | string>;
+  events?: {
+    onReady?: () => void;
+    onStateChange?: (event: { data: number }) => void;
+    onError?: () => void;
+  };
+};
+
+declare global {
+  interface Window {
+    YT?: {
+      Player: new (element: HTMLElement, options: YouTubePlayerOptions) => YouTubePlayerState;
+      PlayerState: {
+        ENDED: number;
+        PLAYING: number;
+        PAUSED: number;
+        BUFFERING: number;
+        CUED: number;
+      };
+    };
+    onYouTubeIframeAPIReady?: () => void;
+  }
+}
+
+let youtubeApiPromise: Promise<void> | null = null;
+
+const loadYouTubeIframeApi = (): Promise<void> => {
+  if (window.YT?.Player) return Promise.resolve();
+  if (youtubeApiPromise) return youtubeApiPromise;
+
+  youtubeApiPromise = new Promise<void>((resolve, reject) => {
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      'script[src="https://www.youtube.com/iframe_api"]',
+    );
+
+    const previousReady = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
+      previousReady?.();
+      resolve();
+    };
+
+    if (existingScript) {
+      existingScript.addEventListener('error', () => reject(new Error('YouTube API failed to load.')), {
+        once: true,
+      });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://www.youtube.com/iframe_api';
+    script.async = true;
+    script.onerror = () => reject(new Error('YouTube API failed to load.'));
+    document.head.appendChild(script);
+  }).catch((error) => {
+    youtubeApiPromise = null;
+    throw error;
+  });
+
+  return youtubeApiPromise;
+};
 
 interface ProjectModalProps {
   project: Project | null;
@@ -42,6 +119,8 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
 
   const isVideoProject = project?.categoryTag === 'VIDEO' || project?.categoryTag === 'SHORTS' || !!project?.videoUrl;
   const isProductPage = project?.categoryTag === 'PRODUCT' || project?.category === 'PRODUCT PAGE';
+  const youtubeVideoId = getYouTubeVideoId(project?.videoUrl);
+  const preferredMediaDisplay = project?.mediaDisplay ?? (project?.videoUrl ? 'youtube' : 'thumbnail');
 
   // Active view tab inside modal
   const [activeTab, setActiveTab] = useState<'video' | 'detail_doc' | 'overview'>('overview');
@@ -53,6 +132,9 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
   const [videoLoading, setVideoLoading] = useState<boolean>(true);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const youtubeContainerRef = useRef<HTMLDivElement | null>(null);
+  const youtubePlayerRef = useRef<YouTubePlayerState | null>(null);
+  const [youtubePlayerReady, setYouTubePlayerReady] = useState(false);
 
   // Sync state whenever the selected project or startWithVideo changes
   useEffect(() => {
@@ -61,19 +143,105 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
     setVideoError(false);
     setVideoLoading(true);
     setCurrentTime(0);
+    setDuration(0);
+    setIsPlaying(true);
+    setIsMuted(true);
+    setYouTubePlayerReady(false);
 
     if (isProductPage) {
       setActiveTab('detail_doc');
-    } else if (isVideoProject) {
+    } else if (isVideoProject && (startWithVideo || preferredMediaDisplay === 'youtube')) {
       setActiveTab('video');
       setIsPlaying(true);
     } else {
       setActiveTab('overview');
     }
-  }, [project?.id, startWithVideo, isProductPage, isVideoProject]);
+  }, [project?.id, startWithVideo, isProductPage, isVideoProject, preferredMediaDisplay]);
+
+  // Load and initialize the YouTube IFrame Player only when the video tab is visible.
+  useEffect(() => {
+    if (!project || !youtubeVideoId || activeTab !== 'video' || !youtubeContainerRef.current) {
+      return;
+    }
+
+    let cancelled = false;
+
+    loadYouTubeIframeApi()
+      .then(() => {
+        if (cancelled || !youtubeContainerRef.current || !window.YT?.Player) return;
+
+        youtubePlayerRef.current?.destroy();
+        youtubePlayerRef.current = new window.YT.Player(youtubeContainerRef.current, {
+          videoId: youtubeVideoId,
+          playerVars: {
+            autoplay: 1,
+            controls: 0,
+            disablekb: 1,
+            modestbranding: 1,
+            playsinline: 1,
+            rel: 0,
+          },
+          events: {
+            onReady: () => {
+              if (cancelled || !youtubePlayerRef.current) return;
+              youtubePlayerRef.current.mute();
+              youtubePlayerRef.current.playVideo();
+              setDuration(youtubePlayerRef.current.getDuration() || 0);
+              setVideoLoading(false);
+              setYouTubePlayerReady(true);
+            },
+            onStateChange: ({ data }) => {
+              if (!window.YT) return;
+              setIsPlaying(data === window.YT.PlayerState.PLAYING);
+              if (data === window.YT.PlayerState.ENDED) setCurrentTime(0);
+            },
+            onError: () => {
+              setVideoError(true);
+              setVideoLoading(false);
+            },
+          },
+        });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setVideoError(true);
+          setVideoLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      youtubePlayerRef.current?.destroy();
+      youtubePlayerRef.current = null;
+      setYouTubePlayerReady(false);
+    };
+  }, [activeTab, project?.id, youtubeVideoId]);
+
+  // Keep the custom timeline synchronized with the YouTube player.
+  useEffect(() => {
+    if (!youtubeVideoId || !youtubePlayerReady || activeTab !== 'video') return;
+
+    const timer = window.setInterval(() => {
+      const player = youtubePlayerRef.current;
+      if (!player) return;
+      setCurrentTime(player.getCurrentTime() || 0);
+      setDuration(player.getDuration() || 0);
+    }, 250);
+
+    return () => window.clearInterval(timer);
+  }, [activeTab, youtubePlayerReady, youtubeVideoId]);
 
   // Handle Play/Pause toggle
   const togglePlay = () => {
+    if (youtubeVideoId && youtubePlayerRef.current) {
+      if (isPlaying) {
+        youtubePlayerRef.current.pauseVideo();
+      } else {
+        youtubePlayerRef.current.playVideo();
+      }
+      return;
+    }
+
     if (!videoRef.current) {
       setIsPlaying(!isPlaying);
       return;
@@ -97,6 +265,16 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
 
   // Handle Mute toggle
   const toggleMute = () => {
+    if (youtubeVideoId && youtubePlayerRef.current) {
+      if (isMuted) {
+        youtubePlayerRef.current.unMute();
+      } else {
+        youtubePlayerRef.current.mute();
+      }
+      setIsMuted(!isMuted);
+      return;
+    }
+
     if (videoRef.current) {
       videoRef.current.muted = !isMuted;
     }
@@ -107,6 +285,10 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const seekTime = parseFloat(e.target.value);
     setCurrentTime(seekTime);
+    if (youtubeVideoId && youtubePlayerRef.current) {
+      youtubePlayerRef.current.seekTo(seekTime, true);
+      return;
+    }
     if (videoRef.current) {
       videoRef.current.currentTime = seekTime;
     }
@@ -114,6 +296,10 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
 
   // Handle Fullscreen Video
   const handleFullscreen = () => {
+    if (youtubeVideoId && youtubePlayerRef.current) {
+      youtubePlayerRef.current.getIframe().requestFullscreen?.().catch(() => {});
+      return;
+    }
     if (videoRef.current && videoRef.current.requestFullscreen) {
       videoRef.current.requestFullscreen().catch(() => {});
     }
@@ -129,6 +315,10 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
 
   if (!project) return null;
 
+  const projectImage =
+    preferredMediaDisplay === 'youtube'
+      ? getYouTubeThumbnailUrl(project.videoUrl) || project.image
+      : project.image;
   const pTrans = getProjectTranslation(project.id);
   const projectTitle = pTrans?.title || project.title;
   const projectDesc = pTrans?.description || project.description;
@@ -308,8 +498,26 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                   <WatermarkOverlay variant="video" text="lovey" />
 
                   {project.videoUrl && !videoError ? (
-                    <>
-                      <video
+                    youtubeVideoId ? (
+                      <div className="relative h-full w-full bg-neutral-950">
+                        {/* The API replaces this empty node with its iframe. */}
+                        <div
+                          ref={youtubeContainerRef}
+                          className="h-full w-full"
+                          aria-label={`${projectTitle} YouTube player`}
+                        />
+                        {videoLoading && (
+                          <div className="absolute inset-0 z-10 flex items-center justify-center bg-neutral-950/60 pointer-events-none">
+                            <div className="flex flex-col items-center gap-2">
+                              <div className="h-8 w-8 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                              <span className="text-xs text-neutral-300 font-medium">Loading YouTube player...</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        <video
                         key={`video-player-${project.id}`}
                         ref={videoRef}
                         autoPlay
@@ -341,35 +549,36 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                         className="h-full w-full object-contain cursor-pointer"
                       >
                         <source src={project.videoUrl} type="video/mp4" />
-                      </video>
+                        </video>
 
-                      {/* Loading State Spinner */}
-                      {videoLoading && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-neutral-950/60 pointer-events-none">
-                          <div className="flex flex-col items-center gap-2">
-                            <div className="h-8 w-8 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                            <span className="text-xs text-neutral-300 font-medium">Loading video...</span>
+                        {/* Loading State Spinner */}
+                        {videoLoading && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-neutral-950/60 pointer-events-none">
+                            <div className="flex flex-col items-center gap-2">
+                              <div className="h-8 w-8 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                              <span className="text-xs text-neutral-300 font-medium">Loading video...</span>
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                      {/* Big Center Play Overlay (when paused) */}
-                      {!isPlaying && !videoLoading && (
-                        <div
-                          onClick={togglePlay}
-                          className="absolute inset-0 flex items-center justify-center bg-neutral-950/40 cursor-pointer transition-opacity"
-                        >
-                          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-600 text-white shadow-2xl transition-transform hover:scale-110">
-                            <Play size={28} className="fill-white ml-1" />
+                        {/* Big Center Play Overlay (when paused) */}
+                        {!isPlaying && !videoLoading && (
+                          <div
+                            onClick={togglePlay}
+                            className="absolute inset-0 flex items-center justify-center bg-neutral-950/40 cursor-pointer transition-opacity"
+                          >
+                            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-600 text-white shadow-2xl transition-transform hover:scale-110">
+                              <Play size={28} className="fill-white ml-1" />
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </>
+                        )}
+                      </>
+                    )
                   ) : (
                     /* High-fidelity Video Reel Fallback Simulator */
                     <div className="relative h-full w-full bg-neutral-950 flex flex-col justify-between p-6">
                       <img
-                        src={project.image}
+                        src={projectImage}
                         alt={projectTitle}
                         referrerPolicy="no-referrer"
                         className="absolute inset-0 h-full w-full object-cover opacity-35"
@@ -485,7 +694,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
               {activeTab === 'overview' && (
                 <div className="relative aspect-16/9 w-full bg-neutral-950 rounded-2xl overflow-hidden shadow-xs">
                   <img
-                    src={project.image}
+                    src={projectImage}
                     alt={projectTitle}
                     referrerPolicy="no-referrer"
                     className="h-full w-full object-cover"

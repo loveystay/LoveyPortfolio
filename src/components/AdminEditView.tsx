@@ -33,6 +33,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ProjectEditorModal } from './ProjectEditorModal';
 import { ChangePasswordModal } from './ChangePasswordModal';
 import { AdminVisitorAnalytics } from './AdminVisitorAnalytics';
+import { getYouTubeThumbnailUrl } from '../lib/youtube';
 
 interface AdminEditViewProps {
   onSelectProjectPreview: (project: Project) => void;
@@ -563,6 +564,10 @@ export const AdminEditView: React.FC<AdminEditViewProps> = ({
         <div className="mt-6 space-y-3.5">
           {filteredProjects.map((project, index) => {
             const isVideo = project.categoryTag === 'VIDEO' || project.categoryTag === 'SHORTS' || !!project.videoUrl;
+            const projectImage =
+              project.mediaDisplay === 'youtube'
+                ? getYouTubeThumbnailUrl(project.videoUrl) || project.image
+                : project.image;
 
             return (
               <motion.div
@@ -576,7 +581,7 @@ export const AdminEditView: React.FC<AdminEditViewProps> = ({
                 <div className="flex items-center gap-4 flex-1 min-w-0">
                   <div className="relative h-18 w-28 sm:h-20 sm:w-32 shrink-0 overflow-hidden rounded-xl bg-neutral-900 border border-neutral-200">
                     <img
-                      src={project.image}
+                      src={projectImage}
                       alt={project.title}
                       className="h-full w-full object-cover"
                     />

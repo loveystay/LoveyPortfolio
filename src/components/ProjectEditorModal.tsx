@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Project, DetailSection } from "../types";
 import {
   X,
@@ -25,6 +26,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { requireSupabase } from "../lib/supabase";
 import { uploadPortfolioAsset } from "../lib/storage";
+import { getYouTubeThumbnailUrl, getYouTubeVideoId } from "../lib/youtube";
 
 interface ProjectEditorModalProps {
   isOpen: boolean;
@@ -107,6 +109,9 @@ export const ProjectEditorModal: React.FC<ProjectEditorModalProps> = ({
   const [duration, setDuration] = useState("12분 40초 롱폼");
   const [image, setImage] = useState(PRESET_VIDEO_IMAGES[0].url);
   const [videoUrl, setVideoUrl] = useState("");
+  const [mediaDisplay, setMediaDisplay] = useState<"thumbnail" | "youtube">(
+    "thumbnail",
+  );
   const [description, setDescription] = useState("");
   const [fullStory, setFullStory] = useState("");
   const [featuredInHome, setFeaturedInHome] = useState(true);
@@ -221,6 +226,10 @@ export const ProjectEditorModal: React.FC<ProjectEditorModalProps> = ({
             : PRESET_VIDEO_IMAGES[0].url),
       );
       setVideoUrl(projectToEdit.videoUrl || "");
+      setMediaDisplay(
+        projectToEdit.mediaDisplay ||
+          (projectToEdit.videoUrl ? "youtube" : "thumbnail"),
+      );
       setDescription(projectToEdit.description || "");
       setFullStory(projectToEdit.fullStory || "");
       setFeaturedInHome(projectToEdit.featuredInHome ?? true);
@@ -255,6 +264,7 @@ export const ProjectEditorModal: React.FC<ProjectEditorModalProps> = ({
       setVideoUrl(
         "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
       );
+      setMediaDisplay("thumbnail");
       setDescription("");
       setFullStory("");
       setFeaturedInHome(true);
@@ -451,6 +461,22 @@ export const ProjectEditorModal: React.FC<ProjectEditorModalProps> = ({
       return;
     }
 
+    if (
+      !isProductPage &&
+      mediaDisplay === "youtube" &&
+      !getYouTubeVideoId(videoUrl)
+    ) {
+      alert(
+        "YouTube 영상 표시를 사용하려면 유효한 YouTube 링크를 입력해 주세요.",
+      );
+      return;
+    }
+
+    const youtubeThumbnail =
+      !isProductPage && mediaDisplay === "youtube"
+        ? getYouTubeThumbnailUrl(videoUrl)
+        : null;
+
     const projectData: Omit<Project, "id"> = {
       title: title.trim(),
       subtitle: subtitle.trim() || undefined,
@@ -465,11 +491,13 @@ export const ProjectEditorModal: React.FC<ProjectEditorModalProps> = ({
         (isProductPage ? "상세페이지 디자인" : "영상 컷편집 & 디자인"),
       duration: duration.trim() || undefined,
       image:
+        youtubeThumbnail ||
         image.trim() ||
         (isProductPage
           ? PRESET_PRODUCT_IMAGES[0].url
           : PRESET_VIDEO_IMAGES[0].url),
       videoUrl: isProductPage ? undefined : videoUrl.trim() || undefined,
+      mediaDisplay: isProductPage ? undefined : mediaDisplay,
       description: description.trim(),
       fullStory: fullStory.trim() || description.trim(),
       featuredInHome,
@@ -505,9 +533,10 @@ export const ProjectEditorModal: React.FC<ProjectEditorModalProps> = ({
     }
   };
 
-  return (
+  return createPortal(
+    (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 pt-20 sm:p-6 sm:pt-24">
+      <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-none p-3 pt-20 sm:p-6 sm:pt-24">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -521,7 +550,7 @@ export const ProjectEditorModal: React.FC<ProjectEditorModalProps> = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: 15 }}
           transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-          className="relative w-full max-w-5xl rounded-3xl bg-white shadow-2xl border border-neutral-200/90 z-10 overflow-hidden my-2 sm:my-4 max-h-[calc(100vh-6rem)] sm:max-h-[calc(100vh-8rem)] flex flex-col"
+          className="relative w-full max-w-5xl rounded-3xl bg-white shadow-2xl border border-neutral-200/90 z-10 overflow-hidden my-2 sm:my-4 max-h-[calc(100vh-4rem)] sm:max-h-[calc(100vh-6rem)] flex flex-col"
         >
           {/* Header Bar */}
           <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4 sm:px-8 bg-neutral-50/70">
@@ -583,8 +612,9 @@ export const ProjectEditorModal: React.FC<ProjectEditorModalProps> = ({
           {activeTab === "form" ? (
             <form
               onSubmit={handleSubmit}
-              className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6"
+              className="flex min-h-0 flex-1 flex-col"
             >
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-6 sm:p-8 space-y-6">
               {/* Category Selector */}
               <div>
                 <label className="block text-xs font-bold tracking-wider text-neutral-700 uppercase mb-2">
@@ -843,17 +873,29 @@ export const ProjectEditorModal: React.FC<ProjectEditorModalProps> = ({
                   </label>
                   <input
                     type="url"
-                    required
+                    required={isProductPage || mediaDisplay === "thumbnail"}
+                    disabled={!isProductPage && mediaDisplay === "youtube"}
                     value={image}
                     onChange={(e) => setImage(e.target.value)}
                     placeholder="https://..."
-                    className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-medium text-neutral-900 focus:border-blue-600 focus:outline-none transition shadow-2xs mb-2"
+                    className={`w-full rounded-xl border px-4 py-2.5 text-sm font-medium focus:outline-none transition shadow-2xs mb-2 ${
+                      !isProductPage && mediaDisplay === "youtube"
+                        ? "cursor-not-allowed border-neutral-200 bg-neutral-100 text-neutral-400"
+                        : "border-neutral-200 bg-white text-neutral-900 focus:border-blue-600"
+                    }`}
                   />
-                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[11px] font-bold text-neutral-700 hover:bg-neutral-50">
+                  <label
+                    className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-[11px] font-bold ${
+                      !isProductPage && mediaDisplay === "youtube"
+                        ? "cursor-not-allowed border-neutral-200 bg-neutral-100 text-neutral-400"
+                        : "cursor-pointer border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
+                    }`}
+                  >
                     Upload image to Supabase Storage
                     <input
                       type="file"
                       accept="image/*"
+                      disabled={!isProductPage && mediaDisplay === "youtube"}
                       className="hidden"
                       onChange={async (event) => {
                         const file = event.target.files?.[0];
@@ -885,11 +927,14 @@ export const ProjectEditorModal: React.FC<ProjectEditorModalProps> = ({
                       <button
                         type="button"
                         key={idx}
+                        disabled={!isProductPage && mediaDisplay === "youtube"}
                         onClick={() => setImage(preset.url)}
-                        className={`px-2.5 py-1 rounded-lg font-medium text-[11px] shrink-0 transition cursor-pointer ${
-                          isProductPage
-                            ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-800"
-                            : "bg-neutral-100 hover:bg-neutral-200 text-neutral-700"
+                        className={`px-2.5 py-1 rounded-lg font-medium text-[11px] shrink-0 transition ${
+                          !isProductPage && mediaDisplay === "youtube"
+                            ? "cursor-not-allowed bg-neutral-100 text-neutral-300"
+                            : isProductPage
+                              ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-800"
+                              : "bg-neutral-100 hover:bg-neutral-200 text-neutral-700"
                         }`}
                       >
                         {preset.label}
@@ -898,9 +943,58 @@ export const ProjectEditorModal: React.FC<ProjectEditorModalProps> = ({
                   </div>
                 </div>
 
-                {/* Video URL (Only for Video Projects) */}
+                {/* Media display mode and video URL (Only for Video Projects) */}
                 {!isProductPage && (
-                  <div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-4 rounded-xl border border-neutral-200 bg-white px-4 py-3">
+                      <div className="min-w-0">
+                        <label
+                          htmlFor="media-display-toggle"
+                          className="block text-xs font-bold tracking-wider text-neutral-800 uppercase"
+                        >
+                          대표 미디어 표시 방식
+                        </label>
+                        <p className="mt-1 text-[11px] text-neutral-500 break-keep">
+                          {mediaDisplay === "thumbnail"
+                            ? "프로젝트를 열면 등록한 썸네일 이미지가 먼저 표시됩니다."
+                            : "썸네일 이미지 입력이 비활성화되고 YouTube 영상이 먼저 표시됩니다."}
+                        </p>
+                      </div>
+                      <button
+                        id="media-display-toggle"
+                        type="button"
+                        role="switch"
+                        aria-checked={mediaDisplay === "thumbnail"}
+                        onClick={() =>
+                          setMediaDisplay((current) =>
+                            current === "youtube" ? "thumbnail" : "youtube",
+                          )
+                        }
+                        className={`relative inline-flex h-7 w-13 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+                          mediaDisplay === "thumbnail"
+                            ? "bg-blue-600"
+                            : "bg-neutral-300"
+                        }`}
+                        title={
+                          mediaDisplay === "thumbnail"
+                            ? "YouTube 영상으로 표시"
+                            : "썸네일 이미지로 표시"
+                        }
+                      >
+                        <span
+                          className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                            mediaDisplay === "thumbnail"
+                              ? "translate-x-7"
+                              : "translate-x-1"
+                          }`}
+                        />
+                        <span className="sr-only">
+                          {mediaDisplay === "thumbnail"
+                            ? "썸네일 이미지 표시 ON"
+                            : "YouTube 영상 표시 OFF"}
+                        </span>
+                      </button>
+                    </div>
                     <label className="block text-xs font-bold tracking-wider text-neutral-700 uppercase mb-1.5">
                       동영상 재생 링크 (MP4 또는 YouTube 링크)
                     </label>
@@ -911,6 +1005,12 @@ export const ProjectEditorModal: React.FC<ProjectEditorModalProps> = ({
                       placeholder="https://commondatastorage.googleapis.com/... or YouTube link"
                       className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-medium text-neutral-900 focus:border-blue-600 focus:outline-none transition shadow-2xs"
                     />
+                    {mediaDisplay === "youtube" && (
+                      <p className="text-[11px] font-medium text-blue-600">
+                        YouTube 영상 표시 OFF: 썸네일 이미지 입력이
+                        비활성화됩니다.
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -1514,8 +1614,10 @@ export const ProjectEditorModal: React.FC<ProjectEditorModalProps> = ({
                 </div>
               </div>
 
+              </div>
+
               {/* Submit / Cancel Footer Buttons */}
-              <div className="sticky bottom-0 bg-white pt-4 pb-2 border-t border-neutral-100 flex items-center justify-end gap-3">
+              <div className="shrink-0 bg-white px-6 py-4 sm:px-8 border-t border-neutral-100 shadow-[0_-10px_24px_rgba(255,255,255,0.95)] flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={requestClose}
@@ -1546,13 +1648,15 @@ export const ProjectEditorModal: React.FC<ProjectEditorModalProps> = ({
             </form>
           ) : (
             /* Live Preview Mode */
-            <div className="flex-1 overflow-y-auto p-6 sm:p-8 flex flex-col items-center justify-center bg-neutral-50/50">
+            <div className="flex-1 overflow-y-auto overscroll-contain p-6 sm:p-8 flex flex-col items-center justify-center bg-neutral-50/50">
               <div className="w-full max-w-sm rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-md flex flex-col justify-between">
                 <div>
                   <div className="relative aspect-16/10 w-full overflow-hidden rounded-xl bg-neutral-950">
                     <img
                       src={
-                        image ||
+                        (mediaDisplay === "youtube"
+                          ? getYouTubeThumbnailUrl(videoUrl) || image
+                          : image) ||
                         (isProductPage
                           ? PRESET_PRODUCT_IMAGES[0].url
                           : PRESET_VIDEO_IMAGES[0].url)
@@ -1576,13 +1680,15 @@ export const ProjectEditorModal: React.FC<ProjectEditorModalProps> = ({
                         </span>
                       )}
                     </div>
-                    {videoUrl && !isProductPage && (
-                      <div className="absolute inset-0 bg-neutral-950/20 flex items-center justify-center">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/90 text-blue-600 shadow-md">
-                          <Play size={16} className="fill-blue-600 ml-0.5" />
+                    {videoUrl &&
+                      !isProductPage &&
+                      mediaDisplay === "youtube" && (
+                        <div className="absolute inset-0 bg-neutral-950/20 flex items-center justify-center">
+                          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/90 text-blue-600 shadow-md">
+                            <Play size={16} className="fill-blue-600 ml-0.5" />
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
                   </div>
 
                   <div className="mt-4">
@@ -1628,7 +1734,7 @@ export const ProjectEditorModal: React.FC<ProjectEditorModalProps> = ({
       </div>
 
       {showCloseConfirm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-neutral-950/35 p-4">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-neutral-950/35 p-4">
           <div
             role="dialog"
             aria-modal="true"
@@ -1664,5 +1770,7 @@ export const ProjectEditorModal: React.FC<ProjectEditorModalProps> = ({
         </div>
       )}
     </AnimatePresence>
+    ),
+    document.body,
   );
 };
