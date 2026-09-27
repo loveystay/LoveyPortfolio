@@ -113,8 +113,6 @@ export default function App() {
 
   // Global Anti-Theft & Right-Click / PrintScreen / Mobile Screenshot Protection
   useEffect(() => {
-    // TODO: 화면 캡처 방지 기능 임시 차단
-    return;
     let restoreTimeout: NodeJS.Timeout | null = null;
 
     const triggerCaptureProtection = (reason: string = "화면 캡처") => {
