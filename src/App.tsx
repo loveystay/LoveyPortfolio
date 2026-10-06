@@ -23,9 +23,8 @@ import {
   Image as ImageIcon,
   SlidersHorizontal,
   ShieldCheck,
-  ShieldAlert,
 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 
 export type WorksTestScenario = "all" | "empty" | "no-video" | "no-product";
 
@@ -50,7 +49,6 @@ export default function App() {
   const [isAIConsultantOpen, setIsAIConsultantOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [testScenario, setTestScenario] = useState<WorksTestScenario>("all");
-  const [isCaptureShieldActive, setIsCaptureShieldActive] = useState(false);
   const [isHeroOpenForProjects, setIsHeroOpenForProjects] = useState(true);
   const [isHeroStatusLoading, setIsHeroStatusLoading] = useState(isSupabaseConfigured);
   const [isHeroStatusSaving, setIsHeroStatusSaving] = useState(false);
@@ -214,30 +212,8 @@ export default function App() {
     return () => window.removeEventListener("hashchange", checkSecretURL);
   }, []);
 
-  // Global Anti-Theft & Right-Click / PrintScreen / Mobile Screenshot Protection
+  // Preserve basic content protections without interfering with screenshots.
   useEffect(() => {
-    let restoreTimeout: NodeJS.Timeout | null = null;
-
-    const triggerCaptureProtection = (reason: string = "화면 캡처") => {
-      // 1. Immediately overwrite clipboard with copyright notice
-      try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard
-            .writeText(
-              "🔒 [lovey 저작권 안내] 본 포트폴리오 작업물의 무단 캡처, 복제 및 도용은 저작권법에 의해 엄격히 금지되어 있습니다. (All Rights Reserved © lovey)",
-            )
-            .catch(() => {});
-        }
-      } catch {
-        // Ignore
-      }
-
-      // 2. Instantly show pitch-black anti-capture shield (0ms latency to ruin any capture buffer)
-      setIsCaptureShieldActive(true);
-      setToastMessage(`🔒 ${reason}가 감지되어 화면이 보호 처리되었습니다.`);
-    };
-
-    // 1. Block Context Menu (Right-Click)
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
       setToastMessage(
@@ -245,7 +221,6 @@ export default function App() {
       );
     };
 
-    // 2. Block Image Dragging / Dropping
     const handleDragStart = (e: DragEvent) => {
       if (activeTabRef.current === "admin") return;
 
@@ -260,126 +235,12 @@ export default function App() {
       }
     };
 
-    // 3. Block Keyboard shortcuts (PrintScreen, Ctrl+S, Ctrl+P, Mac Screenshots, Snipping Tool)
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // PrintScreen key (Windows/Linux)
-      if (
-        e.key === "PrintScreen" ||
-        e.code === "PrintScreen" ||
-        e.keyCode === 44
-      ) {
-        try {
-          e.preventDefault();
-        } catch {}
-        triggerCaptureProtection("PrintScreen 캡처");
-        return;
-      }
-
-      // Ctrl + S or Cmd + S (Save Page)
-      if ((e.ctrlKey || e.metaKey) && (e.key === "s" || e.key === "S")) {
-        e.preventDefault();
-        setToastMessage("🔒 작업물 저장이 제한되어 있습니다.");
-        return;
-      }
-
-      // Ctrl + P or Cmd + P (Print / PDF save)
-      if ((e.ctrlKey || e.metaKey) && (e.key === "p" || e.key === "P")) {
-        try {
-          e.preventDefault();
-        } catch {}
-        triggerCaptureProtection("화면 인쇄");
-        return;
-      }
-
-      // Mac Screenshot shortcuts: Cmd+Shift+3, Cmd+Shift+4, Cmd+Shift+5
-      if (
-        (e.metaKey || e.ctrlKey) &&
-        e.shiftKey &&
-        (e.key === "3" ||
-          e.key === "4" ||
-          e.key === "5" ||
-          e.key === "$" ||
-          e.key === "%" ||
-          e.key === "#")
-      ) {
-        try {
-          e.preventDefault();
-        } catch {}
-        triggerCaptureProtection("Mac 화면 캡처");
-        return;
-      }
-
-      // Windows Snipping tool shortcut: Win+Shift+S or Ctrl+Shift+S
-      if (
-        (e.ctrlKey || e.metaKey) &&
-        e.shiftKey &&
-        (e.key === "s" || e.key === "S")
-      ) {
-        try {
-          e.preventDefault();
-        } catch {}
-        triggerCaptureProtection("캡처 도구");
-        return;
-      }
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (
-        e.key === "PrintScreen" ||
-        e.code === "PrintScreen" ||
-        e.keyCode === 44
-      ) {
-        triggerCaptureProtection("PrintScreen 캡처");
-      }
-    };
-
-    // 4. Mobile & Desktop App Switcher / Screenshot Blur Protection
-    // Mobile screenshot triggers app blur/visibility change (Volume+Power, 3-finger swipe, notification drag)
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "hidden") {
-        setIsCaptureShieldActive(true);
-      }
-    };
-
-    const handleWindowBlur = () => {
-      // Instantly blank screen when focus is lost (e.g. mobile screenshot overlay or snippet tool)
-      setIsCaptureShieldActive(true);
-    };
-
-    const handleWindowFocus = () => {
-      // When user returns, keep shield for a brief safety moment then auto-unlock if desired
-      if (restoreTimeout) clearTimeout(restoreTimeout);
-      restoreTimeout = setTimeout(() => {
-        // Allow user to tap/click to unlock
-      }, 1000);
-    };
-
-    // 5. Mobile multi-finger screenshot gesture detection (3 or more fingers swipe)
-    const handleTouchStart = (e: TouchEvent) => {
-      if (e.touches && e.touches.length >= 3) {
-        triggerCaptureProtection("모바일 제스처 캡처");
-      }
-    };
-
     window.addEventListener("contextmenu", handleContextMenu);
     window.addEventListener("dragstart", handleDragStart);
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("blur", handleWindowBlur);
-    window.addEventListener("focus", handleWindowFocus);
-    window.addEventListener("touchstart", handleTouchStart, { passive: true });
 
     return () => {
       window.removeEventListener("contextmenu", handleContextMenu);
       window.removeEventListener("dragstart", handleDragStart);
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("blur", handleWindowBlur);
-      window.removeEventListener("focus", handleWindowFocus);
-      window.removeEventListener("touchstart", handleTouchStart);
-      if (restoreTimeout) clearTimeout(restoreTimeout);
     };
   }, []);
 
@@ -650,49 +511,6 @@ export default function App() {
           handleOpenProject(project);
         }}
       />
-
-      {/* Anti-Screen-Capture Visual Shield Overlay (Instant Blackout to Ruin Mobile & PC Screenshots) */}
-      <AnimatePresence>
-        {isCaptureShieldActive && (
-          <motion.div
-            id="anti-capture-shield"
-            initial={{ opacity: 1 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.1 }}
-            onClick={() => setIsCaptureShieldActive(false)}
-            className="fixed inset-0 z-[999999] bg-black flex flex-col items-center justify-center text-white p-6 select-none cursor-pointer"
-          >
-            <div
-              className="flex flex-col items-center text-center max-w-sm"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="h-16 w-16 rounded-3xl bg-red-500/15 border border-red-500/30 flex items-center justify-center text-red-400 mb-4 shadow-2xl">
-                <ShieldAlert size={32} />
-              </div>
-              <span className="font-display text-[11px] font-mono font-bold tracking-widest text-red-400 uppercase mb-1">
-                SECURITY ALERT
-              </span>
-              <h2 className="font-display text-lg sm:text-xl font-extrabold text-white mb-2 tracking-tight">
-                화면 캡처가 차단되었습니다
-              </h2>
-              <p className="text-xs leading-relaxed text-neutral-400 mb-6">
-                본 포트폴리오 작업물은{" "}
-                <strong className="text-white font-bold">© lovey</strong>의
-                저작권 보호를 받는 창작물입니다. 무단 캡처 및 복제는 엄격히
-                제한됩니다.
-              </p>
-              <button
-                type="button"
-                onClick={() => setIsCaptureShieldActive(false)}
-                className="rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-6 py-2.5 text-xs font-bold transition border border-neutral-700 shadow-md cursor-pointer"
-              >
-                화면 터치하여 계속 보기
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Global Toast */}
       <Toast message={toastMessage} onClose={() => setToastMessage(null)} />

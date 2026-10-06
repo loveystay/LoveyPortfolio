@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import Markdown from 'react-markdown';
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import Markdown from "react-markdown";
 import {
   X,
   Send,
@@ -11,16 +11,16 @@ import {
   Check,
   Mail,
   ChevronRight,
-  ChevronLeft
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { useLanguage } from '../context/LanguageContext';
-import { isSupabaseConfigured, requireSupabase } from '../lib/supabase';
-import type { Project } from '../types';
+  ChevronLeft,
+} from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { useLanguage } from "../context/LanguageContext";
+import { isSupabaseConfigured, requireSupabase } from "../lib/supabase";
+import type { Project } from "../types";
 
 interface Message {
   id: string;
-  role: 'user' | 'model';
+  role: "user" | "model";
   text: string;
   time: string;
   recommendedProjectIds?: string[];
@@ -36,11 +36,14 @@ interface AIConsultantModalProps {
 }
 
 const MAX_CHAT_REQUESTS = 20;
-const CHAT_USAGE_STORAGE_KEY = 'lovey-ai-consultation-used';
+const CHAT_USAGE_STORAGE_KEY = "lovey-ai-consultation-used";
 
 const getInitialRemainingRequests = () => {
-  if (typeof window === 'undefined') return MAX_CHAT_REQUESTS;
-  const storedUsage = Number.parseInt(sessionStorage.getItem(CHAT_USAGE_STORAGE_KEY) ?? '0', 10);
+  if (typeof window === "undefined") return MAX_CHAT_REQUESTS;
+  const storedUsage = Number.parseInt(
+    sessionStorage.getItem(CHAT_USAGE_STORAGE_KEY) ?? "0",
+    10,
+  );
   const safeUsage = Number.isFinite(storedUsage)
     ? Math.min(Math.max(storedUsage, 0), MAX_CHAT_REQUESTS)
     : 0;
@@ -56,10 +59,12 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
 }) => {
   const { t, language } = useLanguage();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [remainingRequests, setRemainingRequests] = useState(getInitialRemainingRequests);
+  const [remainingRequests, setRemainingRequests] = useState(
+    getInitialRemainingRequests,
+  );
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const sliderRef = useRef<HTMLDivElement>(null);
@@ -71,69 +76,75 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
   const [startX, setStartX] = useState(0);
   const [scrollLeftState, setScrollLeftState] = useState(0);
 
-  const email = 'contact@staylovey.com';
+  const email = "contact@staylovey.com";
   const localText = {
     ko: {
-      recommended: '추천 포트폴리오',
-      viewProject: '프로젝트 보기',
-      inquiry: '상담 내용으로 문의 메일 작성',
-      mailSubject: '포트폴리오 프로젝트 문의',
-      mailIntro: '안녕하세요. AI 상담 내용을 바탕으로 프로젝트를 문의드립니다.',
-      mailHistory: '상담 내용',
-      failed: '답변을 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.',
+      recommended: "추천 포트폴리오",
+      viewProject: "프로젝트 보기",
+      inquiry: "상담 내용으로 문의 메일 작성",
+      mailSubject: "포트폴리오 프로젝트 문의",
+      mailIntro: "안녕하세요. AI 상담 내용을 바탕으로 프로젝트를 문의드립니다.",
+      mailHistory: "상담 내용",
+      failed: "답변을 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.",
       networkError: `일시적인 통신 오류가 발생했습니다. ${email}으로 문의해 주세요.`,
-      usageInfo: '이번 상담에서 AI 답변은 최대 20회까지 가능합니다.',
-      remaining: '남은 횟수',
-      limitReached: 'AI 상담 20회를 모두 사용했습니다.',
+      usageInfo: "이번 상담에서 AI 답변은 최대 20회까지 가능합니다.",
+      remaining: "남은 횟수",
+      limitReached: "AI 상담 20회를 모두 사용했습니다.",
     },
     en: {
-      recommended: 'Recommended work',
-      viewProject: 'View project',
-      inquiry: 'Continue by email',
-      mailSubject: 'Portfolio project inquiry',
-      mailIntro: 'Hello, I would like to inquire about a project based on this AI consultation.',
-      mailHistory: 'Consultation details',
-      failed: 'Failed to retrieve a response. Please try again.',
+      recommended: "Recommended work",
+      viewProject: "View project",
+      inquiry: "Continue by email",
+      mailSubject: "Portfolio project inquiry",
+      mailIntro:
+        "Hello, I would like to inquire about a project based on this AI consultation.",
+      mailHistory: "Consultation details",
+      failed: "Failed to retrieve a response. Please try again.",
       networkError: `A temporary network issue occurred. Please contact ${email}.`,
-      usageInfo: 'You can request up to 20 AI replies in this consultation.',
-      remaining: 'Remaining',
-      limitReached: 'You have used all 20 AI consultation requests.',
+      usageInfo: "You can request up to 20 AI replies in this consultation.",
+      remaining: "Remaining",
+      limitReached: "You have used all 20 AI consultation requests.",
     },
     ja: {
-      recommended: 'おすすめの実績',
-      viewProject: 'プロジェクトを見る',
-      inquiry: '相談内容をメールで送る',
-      mailSubject: 'ポートフォリオ制作のご相談',
-      mailIntro: 'こんにちは。AI相談の内容をもとに、プロジェクトについてお問い合わせします。',
-      mailHistory: '相談内容',
-      failed: '回答を取得できませんでした。もう一度お試しください。',
+      recommended: "おすすめの実績",
+      viewProject: "プロジェクトを見る",
+      inquiry: "相談内容をメールで送る",
+      mailSubject: "ポートフォリオ制作のご相談",
+      mailIntro:
+        "こんにちは。AI相談の内容をもとに、プロジェクトについてお問い合わせします。",
+      mailHistory: "相談内容",
+      failed: "回答を取得できませんでした。もう一度お試しください。",
       networkError: `一時的な通信エラーが発生しました。${email}までお問い合わせください。`,
-      usageInfo: 'この相談ではAI回答を最大20回まで利用できます。',
-      remaining: '残り回数',
-      limitReached: 'AI相談20回をすべて使用しました。',
+      usageInfo: "この相談ではAI回答を最大20回まで利用できます。",
+      remaining: "残り回数",
+      limitReached: "AI相談20回をすべて使用しました。",
     },
   }[language];
 
   const buildInquiryMailto = () => {
     const history = messages
-      .filter((message) => message.role === 'user')
+      .filter((message) => message.role === "user")
       .slice(-6)
       .map((message) => `- ${message.text}`)
-      .join('\n');
-    const body = `${localText.mailIntro}\n\n${localText.mailHistory}:\n${history || '-'}`;
+      .join("\n");
+    const body = `${localText.mailIntro}\n\n${localText.mailHistory}:\n${history || "-"}`;
     return `mailto:${email}?subject=${encodeURIComponent(localText.mailSubject)}&body=${encodeURIComponent(body)}`;
   };
 
   // Initialize or update welcome message when language or modal state changes
   useEffect(() => {
     if (isOpen) {
-      const timeLocale = language === 'ko' ? 'ko-KR' : language === 'ja' ? 'ja-JP' : 'en-US';
+      const timeLocale =
+        language === "ko" ? "ko-KR" : language === "ja" ? "ja-JP" : "en-US";
       setMessages([
         {
-          id: 'welcome-1',
-          role: 'model',
+          id: "welcome-1",
+          role: "model",
           text: t.aiConsultant.welcomeMsg,
-          time: new Date().toLocaleTimeString(timeLocale, { hour: '2-digit', minute: '2-digit' }),
+          time: new Date().toLocaleTimeString(timeLocale, {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
         },
       ]);
     }
@@ -148,16 +159,16 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
 
   useEffect(() => {
     checkScroll();
-    window.addEventListener('resize', checkScroll);
-    return () => window.removeEventListener('resize', checkScroll);
+    window.addEventListener("resize", checkScroll);
+    return () => window.removeEventListener("resize", checkScroll);
   }, [checkScroll, isOpen]);
 
-  const handleSlide = (direction: 'left' | 'right') => {
+  const handleSlide = (direction: "left" | "right") => {
     if (!sliderRef.current) return;
     const scrollAmount = 280;
     sliderRef.current.scrollBy({
-      left: direction === 'left' ? -scrollAmount : scrollAmount,
-      behavior: 'smooth',
+      left: direction === "left" ? -scrollAmount : scrollAmount,
+      behavior: "smooth",
     });
     setTimeout(checkScroll, 320);
   };
@@ -201,7 +212,7 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
   }, [isOpen]);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
   const handleCopyEmail = async () => {
@@ -234,17 +245,21 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
       String(MAX_CHAT_REQUESTS - nextRemainingRequests),
     );
 
-    const timeLocale = language === 'ko' ? 'ko-KR' : language === 'ja' ? 'ja-JP' : 'en-US';
+    const timeLocale =
+      language === "ko" ? "ko-KR" : language === "ja" ? "ja-JP" : "en-US";
     const userMsg: Message = {
       id: `user-${Date.now()}`,
-      role: 'user',
+      role: "user",
       text: query,
-      time: new Date().toLocaleTimeString(timeLocale, { hour: '2-digit', minute: '2-digit' }),
+      time: new Date().toLocaleTimeString(timeLocale, {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
     };
 
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
-    setInputValue('');
+    setInputValue("");
     setIsLoading(true);
 
     try {
@@ -261,29 +276,56 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
           highlights: project.highlights?.slice(0, 3),
         })),
       };
-      let data: Record<string, unknown>;
 
-      if (isSupabaseConfigured) {
-        const result = await requireSupabase().functions.invoke('chat', { body: requestBody });
-        if (result.error) throw result.error;
-        data = result.data as Record<string, unknown>;
-      } else {
-        const response = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody),
-        });
-        data = await response.json() as Record<string, unknown>;
-        if (!response.ok) throw new Error('AI consultation request failed');
+      let data: Record<string, unknown> = {};
+      const maxRetries = 3;
+      let attempt = 0;
+
+      // 60초 타임아웃 및 점진적 재시도(Exponential Backoff) 적용
+      while (attempt < maxRetries) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+          if (isSupabaseConfigured) {
+            const result = await requireSupabase().functions.invoke("chat", {
+              body: requestBody,
+            });
+            clearTimeout(timeoutId);
+            if (result.error) throw result.error;
+            data = result.data as Record<string, unknown>;
+          } else {
+            const response = await fetch("/api/chat", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(requestBody),
+              signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+            if (!response.ok) throw new Error("AI consultation request failed");
+            data = (await response.json()) as Record<string, unknown>;
+          }
+          break; // 통신 성공 시 루프 탈출
+        } catch (err) {
+          attempt++;
+          if (attempt >= maxRetries) throw err;
+          // 실패 시 2초, 4초 대기 후 재시도
+          await new Promise((resolve) =>
+            setTimeout(resolve, Math.pow(2, attempt) * 1000),
+          );
+        }
       }
 
-      const botReply = typeof data.reply === 'string' && data.reply.trim()
-        ? data.reply
-        : localText.failed;
+      const botReply =
+        typeof data.reply === "string" && data.reply.trim()
+          ? data.reply
+          : localText.failed;
       const recommendedProjectIds = Array.isArray(data.recommendedProjectIds)
         ? data.recommendedProjectIds
-            .filter((id: unknown): id is string =>
-              typeof id === 'string' && projects.some((project) => project.id === id)
+            .filter(
+              (id: unknown): id is string =>
+                typeof id === "string" &&
+                projects.some((project) => project.id === id),
             )
             .slice(0, 3)
         : [];
@@ -292,9 +334,12 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
         ...prev,
         {
           id: `bot-${Date.now()}`,
-          role: 'model',
+          role: "model",
           text: botReply,
-          time: new Date().toLocaleTimeString(timeLocale, { hour: '2-digit', minute: '2-digit' }),
+          time: new Date().toLocaleTimeString(timeLocale, {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
           recommendedProjectIds,
           shouldContact: data.shouldContact === true,
         },
@@ -305,9 +350,12 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
         ...prev,
         {
           id: `bot-${Date.now()}`,
-          role: 'model',
+          role: "model",
           text: localText.networkError,
-          time: new Date().toLocaleTimeString(timeLocale, { hour: '2-digit', minute: '2-digit' }),
+          time: new Date().toLocaleTimeString(timeLocale, {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
           shouldContact: true,
         },
       ]);
@@ -317,13 +365,17 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
   };
 
   const handleResetChat = () => {
-    const timeLocale = language === 'ko' ? 'ko-KR' : language === 'ja' ? 'ja-JP' : 'en-US';
+    const timeLocale =
+      language === "ko" ? "ko-KR" : language === "ja" ? "ja-JP" : "en-US";
     setMessages([
       {
         id: `welcome-${Date.now()}`,
-        role: 'model',
+        role: "model",
         text: t.aiConsultant.welcomeMsg,
-        time: new Date().toLocaleTimeString(timeLocale, { hour: '2-digit', minute: '2-digit' }),
+        time: new Date().toLocaleTimeString(timeLocale, {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
       },
     ]);
   };
@@ -397,14 +449,14 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
           {/* Chat Messages Area */}
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-neutral-50/40">
             {messages.map((msg) => {
-              const isBot = msg.role === 'model';
+              const isBot = msg.role === "model";
               const recommendedProjects = (msg.recommendedProjectIds ?? [])
                 .map((id) => projects.find((project) => project.id === id))
                 .filter((project): project is Project => Boolean(project));
               return (
                 <div
                   key={msg.id}
-                  className={`flex gap-3 ${isBot ? 'items-start' : 'items-end justify-end'}`}
+                  className={`flex gap-3 ${isBot ? "items-start" : "items-end justify-end"}`}
                 >
                   {isBot && (
                     <div className="shrink-0 flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white shadow-2xs mt-0.5">
@@ -412,12 +464,14 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
                     </div>
                   )}
 
-                  <div className={`flex flex-col ${isBot ? 'items-start' : 'items-end'} max-w-[85%]`}>
+                  <div
+                    className={`flex flex-col ${isBot ? "items-start" : "items-end"} max-w-[85%]`}
+                  >
                     <div
                       className={`rounded-2xl px-4 py-3 text-xs sm:text-sm leading-relaxed break-keep shadow-xs ${
                         isBot
-                          ? 'bg-white text-neutral-800 border border-neutral-200/80'
-                          : 'bg-blue-600 text-white rounded-br-xs'
+                          ? "bg-white text-neutral-800 border border-neutral-200/80"
+                          : "bg-blue-600 text-white rounded-br-xs"
                       }`}
                     >
                       {isBot ? (
@@ -470,7 +524,9 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
                         {localText.inquiry}
                       </a>
                     )}
-                    <span className="mt-1 text-[10px] text-neutral-400 px-1">{msg.time}</span>
+                    <span className="mt-1 text-[10px] text-neutral-400 px-1">
+                      {msg.time}
+                    </span>
                   </div>
 
                   {!isBot && (
@@ -512,7 +568,7 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
               {/* Slider Navigation Arrows */}
               <div className="flex items-center gap-1">
                 <button
-                  onClick={() => handleSlide('left')}
+                  onClick={() => handleSlide("left")}
                   disabled={!canScrollLeft}
                   className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200 disabled:opacity-30 disabled:cursor-not-allowed transition cursor-pointer"
                   aria-label="Previous suggested question"
@@ -520,7 +576,7 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
                   <ChevronLeft size={12} />
                 </button>
                 <button
-                  onClick={() => handleSlide('right')}
+                  onClick={() => handleSlide("right")}
                   disabled={!canScrollRight}
                   className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200 disabled:opacity-30 disabled:cursor-not-allowed transition cursor-pointer"
                   aria-label="Next suggested question"
@@ -535,7 +591,7 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
               {/* Left Gradient Fade Mask */}
               {canScrollLeft && (
                 <div
-                  onClick={() => handleSlide('left')}
+                  onClick={() => handleSlide("left")}
                   className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white via-white/80 to-transparent z-10 pointer-events-auto cursor-pointer flex items-center justify-start"
                 >
                   <ChevronLeft size={14} className="text-neutral-400 -ml-1" />
@@ -552,11 +608,11 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
                 onMouseUp={handleMouseUpOrLeave}
                 onMouseLeave={handleMouseUpOrLeave}
                 className={`flex gap-2 overflow-x-auto pb-1 scroll-smooth no-scrollbar select-none ${
-                  isDragging ? 'cursor-grabbing' : 'cursor-grab'
+                  isDragging ? "cursor-grabbing" : "cursor-grab"
                 }`}
                 style={{
-                  WebkitOverflowScrolling: 'touch',
-                  scrollbarWidth: 'none',
+                  WebkitOverflowScrolling: "touch",
+                  scrollbarWidth: "none",
                 }}
               >
                 {t.aiConsultant.questions.map((q, idx) => (
@@ -572,7 +628,10 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
                     className="shrink-0 rounded-full border border-neutral-200/90 bg-neutral-50/90 px-3.5 py-1.5 text-xs text-neutral-700 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 active:scale-98 transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5 text-left shadow-2xs whitespace-nowrap"
                   >
                     <span>{q}</span>
-                    <ChevronRight size={12} className="text-neutral-400 shrink-0" />
+                    <ChevronRight
+                      size={12}
+                      className="text-neutral-400 shrink-0"
+                    />
                   </button>
                 ))}
               </div>
@@ -580,7 +639,7 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
               {/* Right Gradient Fade Mask */}
               {canScrollRight && (
                 <div
-                  onClick={() => handleSlide('right')}
+                  onClick={() => handleSlide("right")}
                   className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white via-white/80 to-transparent z-10 pointer-events-auto cursor-pointer flex items-center justify-end"
                 >
                   <ChevronRight size={14} className="text-neutral-400 -mr-1" />
@@ -603,14 +662,20 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                placeholder={remainingRequests <= 0 ? localText.limitReached : t.aiConsultant.placeholder}
+                placeholder={
+                  remainingRequests <= 0
+                    ? localText.limitReached
+                    : t.aiConsultant.placeholder
+                }
                 disabled={isLoading || remainingRequests <= 0}
                 maxLength={1000}
                 className="flex-1 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs sm:text-sm text-neutral-900 placeholder-neutral-400 focus:border-blue-600 focus:bg-white focus:outline-none transition disabled:opacity-60"
               />
               <button
                 type="submit"
-                disabled={isLoading || remainingRequests <= 0 || !inputValue.trim()}
+                disabled={
+                  isLoading || remainingRequests <= 0 || !inputValue.trim()
+                }
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-md hover:bg-blue-700 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
                 aria-label={t.aiConsultant.send}
               >
@@ -626,10 +691,10 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
               <span
                 className={`shrink-0 rounded-full px-2 py-0.5 font-bold ${
                   remainingRequests <= 0
-                    ? 'bg-red-50 text-red-600'
+                    ? "bg-red-50 text-red-600"
                     : remainingRequests <= 5
-                    ? 'bg-amber-50 text-amber-700'
-                    : 'bg-blue-50 text-blue-600'
+                      ? "bg-amber-50 text-amber-700"
+                      : "bg-blue-50 text-blue-600"
                 }`}
               >
                 {localText.remaining} {remainingRequests}/{MAX_CHAT_REQUESTS}
@@ -640,13 +705,20 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
             <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-0 pt-2 border-t border-neutral-100 text-[11px] text-neutral-500">
               <span className="flex items-center gap-1 font-medium text-neutral-600 truncate">
                 <Mail size={12} className="text-blue-600 shrink-0" />
-                <span>Contact: <strong className="text-neutral-900 truncate">{email}</strong></span>
+                <span>
+                  Contact:{" "}
+                  <strong className="text-neutral-900 truncate">{email}</strong>
+                </span>
               </span>
               <button
                 onClick={handleCopyEmail}
                 className="self-start sm:self-auto flex items-center gap-1 font-bold text-blue-600 hover:text-blue-700 px-2 py-0.5 rounded bg-blue-50/70 hover:bg-blue-100 transition cursor-pointer"
               >
-                {copied ? <Check size={11} className="text-green-600" /> : <Copy size={11} />}
+                {copied ? (
+                  <Check size={11} className="text-green-600" />
+                ) : (
+                  <Copy size={11} />
+                )}
                 {copied ? t.aiConsultant.copied : t.aiConsultant.copyEmail}
               </button>
             </div>
