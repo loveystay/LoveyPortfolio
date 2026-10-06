@@ -16,6 +16,20 @@ interface AboutViewProps {
   onExploreWorks: () => void;
 }
 
+const withMobileBreakAfter = (text: string, phrase: string) => {
+  const phraseStart = text.indexOf(phrase);
+  if (phraseStart < 0) return text;
+  const phraseEnd = phraseStart + phrase.length;
+
+  return (
+    <>
+      {text.slice(0, phraseEnd)}
+      <br className="sm:hidden" />
+      {text.slice(phraseEnd).replace(/^\s+/, "")}
+    </>
+  );
+};
+
 export const AboutView: React.FC<AboutViewProps> = ({
   onOpenContactModal,
   onExploreWorks,
@@ -66,7 +80,7 @@ export const AboutView: React.FC<AboutViewProps> = ({
             {t.aboutPage.eyebrow}
           </span>
           <h1 className="mt-3 font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-neutral-950 leading-[1.2] sm:leading-[1.25]">
-            <span className="block">{t.aboutPage.mainHeadingPart1}</span>
+            <span className="block font-black">{t.aboutPage.mainHeadingPart1}</span>
             <span className="block mt-1 sm:mt-2 text-neutral-900">
               {t.aboutPage.mainHeadingPart2}
             </span>
@@ -79,7 +93,7 @@ export const AboutView: React.FC<AboutViewProps> = ({
               {t.aboutPage.intro2}
             </p>
             <p className="whitespace-normal sm:whitespace-nowrap leading-relaxed">
-              {t.aboutPage.intro3}
+              {withMobileBreakAfter(t.aboutPage.intro3, "시선을 머물게 하는 컷 편집과")}
             </p>
           </div>
         </motion.div>
@@ -91,11 +105,11 @@ export const AboutView: React.FC<AboutViewProps> = ({
           <span className="font-mono-tag text-xs font-bold tracking-widest text-blue-600 uppercase">
             WORK PRINCIPLES
           </span>
-          <h2 className="mt-2 font-display text-xl sm:text-2xl max-[639px]:!text-xl font-black text-neutral-950 break-keep text-balance">
+          <h2 className="mt-2 font-display text-xl sm:text-2xl max-[639px]:!text-xl font-black max-[639px]:!font-black text-neutral-950 break-keep text-balance">
             {t.aboutPage.principlesTitle}
           </h2>
           <p className="mt-2 text-xs sm:text-sm text-neutral-600 break-keep">
-            {t.aboutPage.principlesSubtitle}
+            {withMobileBreakAfter(t.aboutPage.principlesSubtitle, "지켜나가는")}
           </p>
         </div>
 
@@ -139,7 +153,7 @@ export const AboutView: React.FC<AboutViewProps> = ({
             {t.aboutPage.toolsTitle}
           </h2>
           <p className="mt-2 text-xs sm:text-sm text-neutral-600 break-keep">
-            {t.aboutPage.toolsSubtitle}
+            {withMobileBreakAfter(t.aboutPage.toolsSubtitle, "소프트웨어를 활용하여")}
           </p>
         </div>
 
@@ -172,7 +186,7 @@ export const AboutView: React.FC<AboutViewProps> = ({
                 {t.aboutPage.tool2Title}
               </h3>
               <p className="mt-1.5 text-xs text-neutral-500 leading-relaxed break-keep">
-                {t.aboutPage.tool2Desc}
+                {withMobileBreakAfter(t.aboutPage.tool2Desc, "방지 훅킹,")}
               </p>
             </div>
             <div className="mt-4 sm:mt-5 pt-4 border-t border-neutral-200/50 flex flex-wrap gap-1.5">
@@ -194,7 +208,7 @@ export const AboutView: React.FC<AboutViewProps> = ({
                 {t.aboutPage.tool3Title}
               </h3>
               <p className="mt-1.5 text-xs text-neutral-500 leading-relaxed break-keep">
-                {t.aboutPage.tool3Desc}
+                {withMobileBreakAfter(t.aboutPage.tool3Desc, "셀링포인트 기획,")}
               </p>
             </div>
             <div className="mt-4 sm:mt-5 pt-4 border-t border-neutral-200/50 flex flex-wrap gap-1.5">
@@ -222,7 +236,7 @@ export const AboutView: React.FC<AboutViewProps> = ({
             {t.aboutPage.policyTitle}
           </h2>
           <p className="mt-2 text-xs sm:text-sm text-neutral-600 break-keep">
-            {t.aboutPage.policySubtitle}
+            {withMobileBreakAfter(t.aboutPage.policySubtitle, "안내해 드리는")}
           </p>
         </div>
 
@@ -287,7 +301,7 @@ export const AboutView: React.FC<AboutViewProps> = ({
             {t.process.title}
           </h2>
           <p className="mt-2 text-xs sm:text-sm text-neutral-600 break-keep">
-            {t.process.subtitle}
+            {withMobileBreakAfter(t.process.subtitle, "결과물을 완성하는")}
           </p>
         </div>
 
