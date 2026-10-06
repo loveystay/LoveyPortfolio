@@ -1,6 +1,6 @@
 {
-  "name": "Lovey Portfolio",
-  "description": "Editorial design and video editing portfolio website for Lovey featuring curated selected works, case studies, and interactive contact experience.",
+  "name": "Staylovey",
+  "description": "롱폼 및 숏폼 전문 영상 편집자의 포트폴리오 사이트입니다.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

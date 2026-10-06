@@ -93,6 +93,8 @@ export default function App() {
   };
   const handleSelectTabRef = React.useRef(handleSelectTab);
   handleSelectTabRef.current = handleSelectTab;
+  const activeTabRef = React.useRef(activeTab);
+  activeTabRef.current = activeTab;
   const recordPageViewRef = React.useRef(recordPageView);
   recordPageViewRef.current = recordPageView;
 
@@ -214,8 +216,6 @@ export default function App() {
 
   // Global Anti-Theft & Right-Click / PrintScreen / Mobile Screenshot Protection
   useEffect(() => {
-    // TODO: 화면 캡처 방지 기능 임시 차단
-    return;
     let restoreTimeout: NodeJS.Timeout | null = null;
 
     const triggerCaptureProtection = (reason: string = "화면 캡처") => {
@@ -247,6 +247,8 @@ export default function App() {
 
     // 2. Block Image Dragging / Dropping
     const handleDragStart = (e: DragEvent) => {
+      if (activeTabRef.current === "admin") return;
+
       const target = e.target as HTMLElement;
       if (
         target &&
@@ -449,7 +451,12 @@ export default function App() {
   }, [projects, testScenario]);
 
   return (
-    <div className="relative min-h-screen bg-[#fafafc] text-neutral-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white pb-16 sm:pb-0">
+    <div
+      className={`relative min-h-screen w-full min-w-0 bg-[#fafafc] text-neutral-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white pb-16 sm:pb-0 ${activeTab === "admin" ? "" : "copy-protection"}`}
+      onDragStart={(event) => {
+        if (activeTab !== "admin") event.preventDefault();
+      }}
+    >
       {/* Background Architectural Grid Lines & Watermarks */}
       <BackgroundGrid
         watermarkPosition={
@@ -469,7 +476,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-grow">
+      <main className="min-w-0 flex-grow">
         {activeTab === "home" && (
           <div className="flex flex-col">
             {/* Hero Section matching Screenshot 1 */}

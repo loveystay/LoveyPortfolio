@@ -4,7 +4,7 @@ import { Language } from '../i18n/translations';
 import { Globe } from 'lucide-react';
 
 interface LanguageSelectorProps {
-  variant?: 'header' | 'mobile' | 'footer';
+  variant?: 'header' | 'mobile' | 'compact' | 'footer';
 }
 
 export const LanguageSelector: React.FC<LanguageSelectorProps> = ({ variant = 'header' }) => {
@@ -43,6 +43,8 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({ variant = 'h
     );
   }
 
+  const isCompact = variant === 'compact';
+
   return (
     <div
       id="language-selector"
@@ -61,7 +63,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({ variant = 'h
             type="button"
             onClick={() => setLanguage(lang.code)}
             title={lang.label}
-            className={`rounded-full px-2.5 py-1 text-[11px] font-bold tracking-wider transition-all duration-200 cursor-pointer ${
+            className={`rounded-full ${isCompact ? 'px-1.5 py-1 text-[10px] tracking-normal' : 'px-2.5 py-1 text-[11px] tracking-wider'} font-bold transition-all duration-200 cursor-pointer ${
               isActive
                 ? 'bg-white text-neutral-950 shadow-xs font-extrabold'
                 : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200/50'

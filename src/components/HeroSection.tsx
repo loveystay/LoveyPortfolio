@@ -60,13 +60,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
-        className="relative max-w-5xl px-2"
+        className="relative w-full min-w-0 max-w-5xl px-2"
       >
-        <h1 className="flex flex-col items-center justify-center font-display tracking-tight text-neutral-950">
+        <h1 className="flex w-full min-w-0 flex-col items-center justify-center font-display tracking-tight text-neutral-950">
           <span className="text-[clamp(3rem,20vw,3.5rem)] sm:text-7xl md:text-8xl lg:text-[7rem] font-black leading-none text-neutral-950">
             {t.hero.title1}
           </span>
-          <span className="font-serif-italic font-semibold sm:font-medium tracking-normal text-neutral-500 sm:text-neutral-500 text-[clamp(2.125rem,10.5vw,2.75rem)] sm:text-6xl md:text-7xl lg:text-[6.2rem] mt-1 sm:mt-2 whitespace-nowrap leading-tight">
+          <span className="max-w-full font-serif-italic font-semibold sm:font-medium tracking-normal text-neutral-500 sm:text-neutral-500 text-[clamp(1.75rem,10.5vw,2.75rem)] sm:text-6xl md:text-7xl lg:text-[6.2rem] mt-1 sm:mt-2 whitespace-normal text-balance leading-tight">
             {t.hero.title2}
           </span>
         </h1>
@@ -78,7 +78,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
         id="hero-subtitle"
-        className="mt-6 sm:mt-8 max-w-full sm:max-w-2xl text-[14px] xs:text-[15px] sm:text-lg md:text-xl font-normal text-neutral-700 leading-relaxed px-1 sm:px-4 text-center whitespace-nowrap overflow-hidden text-ellipsis sm:whitespace-normal break-keep tracking-tight"
+        className="mt-6 sm:mt-8 w-full min-w-0 max-w-2xl text-[14px] xs:text-[15px] sm:text-lg md:text-xl font-normal text-neutral-700 leading-relaxed px-1 sm:px-4 text-center break-keep tracking-tight"
       >
         {t.hero.subtitle}
       </motion.p>
