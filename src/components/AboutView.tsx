@@ -91,7 +91,7 @@ export const AboutView: React.FC<AboutViewProps> = ({
           <span className="font-mono-tag text-xs font-bold tracking-widest text-blue-600 uppercase">
             WORK PRINCIPLES
           </span>
-          <h2 className="mt-2 font-display text-2xl font-black text-neutral-950 break-keep text-balance">
+          <h2 className="mt-2 font-display text-xl sm:text-2xl max-[639px]:!text-xl font-black text-neutral-950 break-keep text-balance">
             {t.aboutPage.principlesTitle}
           </h2>
           <p className="mt-2 text-xs sm:text-sm text-neutral-600 break-keep">
@@ -135,7 +135,7 @@ export const AboutView: React.FC<AboutViewProps> = ({
           <span className="font-mono-tag text-xs font-bold tracking-widest text-blue-600 uppercase">
             CAPABILITIES & TOOLS
           </span>
-          <h2 className="mt-2 font-display text-2xl font-black text-neutral-950 break-keep text-balance">
+          <h2 className="mt-2 font-display text-xl sm:text-2xl max-[639px]:!text-xl font-black text-neutral-950 break-keep text-balance">
             {t.aboutPage.toolsTitle}
           </h2>
           <p className="mt-2 text-xs sm:text-sm text-neutral-600 break-keep">
@@ -218,7 +218,7 @@ export const AboutView: React.FC<AboutViewProps> = ({
           <span className="font-mono-tag text-xs font-bold tracking-widest text-blue-600 uppercase">
             POLICY & GUIDELINES
           </span>
-          <h2 className="mt-2 font-display text-2xl font-black text-neutral-950 break-keep text-balance">
+          <h2 className="mt-2 font-display text-xl sm:text-2xl max-[639px]:!text-xl font-black text-neutral-950 break-keep text-balance">
             {t.aboutPage.policyTitle}
           </h2>
           <p className="mt-2 text-xs sm:text-sm text-neutral-600 break-keep">
@@ -283,7 +283,7 @@ export const AboutView: React.FC<AboutViewProps> = ({
           <span className="font-mono-tag text-xs font-bold tracking-widest text-blue-600 uppercase">
             {t.process.eyebrow}
           </span>
-          <h2 className="mt-2 font-display text-2xl font-black text-neutral-950 break-keep text-balance">
+          <h2 className="mt-2 font-display text-xl sm:text-2xl max-[639px]:!text-xl font-black text-neutral-950 break-keep text-balance">
             {t.process.title}
           </h2>
           <p className="mt-2 text-xs sm:text-sm text-neutral-600 break-keep">
@@ -344,7 +344,7 @@ export const AboutView: React.FC<AboutViewProps> = ({
 
       {/* Collaboration Message / CTA */}
       <div className="mt-12 sm:mt-16 rounded-3xl border border-blue-100 bg-blue-50/40 p-6 sm:p-10 lg:p-12 text-center">
-        <h3 className="font-display text-2xl font-black text-neutral-950 break-keep text-balance">
+        <h3 className="font-display text-xl font-black text-neutral-950 break-keep text-balance">
           {t.aboutPage.bannerTitle}
         </h3>
         <p className="mt-3 text-xs sm:text-sm text-neutral-600 max-w-xl mx-auto leading-relaxed break-keep">
