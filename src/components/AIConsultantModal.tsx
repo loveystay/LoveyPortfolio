@@ -233,17 +233,13 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
   const handleSendMessage = async (textToSend?: string) => {
     const query = (textToSend || inputValue).trim();
     if (!query || isLoading) return;
-    if (remainingRequests <= 0) {
+    const fixedAnswerIndex = t.aiConsultant.questions.indexOf(query);
+    const fixedAnswer = t.aiConsultant.answers[fixedAnswerIndex];
+
+    if (fixedAnswerIndex < 0 && remainingRequests <= 0) {
       onShowToast(localText.limitReached);
       return;
     }
-
-    const nextRemainingRequests = remainingRequests - 1;
-    setRemainingRequests(nextRemainingRequests);
-    sessionStorage.setItem(
-      CHAT_USAGE_STORAGE_KEY,
-      String(MAX_CHAT_REQUESTS - nextRemainingRequests),
-    );
 
     const timeLocale =
       language === "ko" ? "ko-KR" : language === "ja" ? "ja-JP" : "en-US";
@@ -260,6 +256,29 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInputValue("");
+
+    if (fixedAnswer) {
+      setMessages([
+        ...newMessages,
+        {
+          id: `bot-${Date.now()}`,
+          role: "model",
+          text: fixedAnswer,
+          time: new Date().toLocaleTimeString(timeLocale, {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        },
+      ]);
+      return;
+    }
+
+    const nextRemainingRequests = remainingRequests - 1;
+    setRemainingRequests(nextRemainingRequests);
+    sessionStorage.setItem(
+      CHAT_USAGE_STORAGE_KEY,
+      String(MAX_CHAT_REQUESTS - nextRemainingRequests),
+    );
     setIsLoading(true);
 
     try {
@@ -624,7 +643,7 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
                         handleSendMessage(q);
                       }
                     }}
-                    disabled={isLoading || remainingRequests <= 0}
+                    disabled={isLoading}
                     className="shrink-0 rounded-full border border-neutral-200/90 bg-neutral-50/90 px-3.5 py-1.5 text-xs text-neutral-700 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 active:scale-98 transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5 text-left shadow-2xs whitespace-nowrap"
                   >
                     <span>{q}</span>
