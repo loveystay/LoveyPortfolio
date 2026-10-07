@@ -1,4 +1,4 @@
--- LoveyPortfolio: database, Auth authorization, Storage, and analytics schema.
+-- Staylovey: database, Auth authorization, Storage, and analytics schema.
 -- Apply with `supabase db push` after linking this repository to a Supabase project.
 
 create table if not exists public.profiles (

@@ -122,12 +122,12 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Mobile menu toggle */}
-        <div className="flex md:hidden items-center space-x-2">
-          <LanguageSelector variant="header" />
+        <div className="flex md:hidden items-center gap-1.5">
+          <LanguageSelector variant="compact" />
           <button
             id="mobile-lets-talk-btn"
             onClick={onOpenContactModal}
-            className="flex items-center gap-1 rounded-full bg-blue-600 px-3 py-1.5 text-xs font-bold tracking-wider text-white uppercase"
+            className="flex items-center gap-1 rounded-full bg-blue-600 px-2.5 py-1.5 text-xs font-bold tracking-wider text-white uppercase"
           >
             <Sparkles size={12} className="text-blue-200" />
             <span>{t.nav.aiConsult}</span>
@@ -216,4 +216,3 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
-

@@ -15,6 +15,7 @@ import { AdminEditView } from "./components/AdminEditView";
 import { ProjectModal } from "./components/ProjectModal";
 import { AIConsultantModal } from "./components/AIConsultantModal";
 import { Toast } from "./components/Toast";
+import { isSupabaseConfigured, requireSupabase } from "./lib/supabase";
 import {
   Eye,
   Layers,
@@ -22,36 +23,136 @@ import {
   Image as ImageIcon,
   SlidersHorizontal,
   ShieldCheck,
-  ShieldAlert,
 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 
 export type WorksTestScenario = "all" | "empty" | "no-video" | "no-product";
+
+const normalizePath = (pathname: string) => pathname.replace(/\/+$/, "") || "/";
+
+const getActiveTabFromLocation = (): NavTab => {
+  if (normalizePath(window.location.pathname) === "/admin") return "admin";
+
+  const historyTab = window.history.state?.tab as NavTab | undefined;
+  return historyTab && ["home", "about", "works", "contact"].includes(historyTab)
+    ? historyTab
+    : "home";
+};
 
 export default function App() {
   const { projects } = useProjects();
   const { isAuthenticated } = useAdminAuth();
   const { recordPageView, recordProjectView } = useVisitorAnalytics();
-  const [activeTab, setActiveTab] = useState<NavTab>("home");
+  const [activeTab, setActiveTab] = useState<NavTab>(getActiveTabFromLocation);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [startModalWithVideo, setStartModalWithVideo] = useState(false);
   const [isAIConsultantOpen, setIsAIConsultantOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [testScenario, setTestScenario] = useState<WorksTestScenario>("all");
-  const [isCaptureShieldActive, setIsCaptureShieldActive] = useState(false);
+  const [isHeroOpenForProjects, setIsHeroOpenForProjects] = useState(true);
+  const [isHeroStatusLoading, setIsHeroStatusLoading] = useState(isSupabaseConfigured);
+  const [isHeroStatusSaving, setIsHeroStatusSaving] = useState(false);
 
   const handleSelectTab = (tab: NavTab) => {
+    const currentPath = normalizePath(window.location.pathname);
+    const currentState =
+      typeof window.history.state === "object" && window.history.state !== null
+        ? window.history.state
+        : {};
+
+    if (tab === "admin") {
+      if (currentPath !== "/admin") {
+        window.history.replaceState(
+          { ...currentState, tab: activeTab },
+          "",
+          window.location.href,
+        );
+        window.history.pushState({ tab }, "", "/admin");
+      } else if (window.location.pathname !== "/admin") {
+        window.history.replaceState(
+          { ...currentState, tab },
+          "",
+          `/admin${window.location.search}${window.location.hash}`,
+        );
+      }
+    } else if (currentPath === "/admin") {
+      window.history.pushState({ tab }, "", "/");
+    } else {
+      window.history.replaceState(
+        { ...currentState, tab },
+        "",
+        window.location.href,
+      );
+    }
+
     setActiveTab(tab);
     recordPageView(tab);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+  const handleSelectTabRef = React.useRef(handleSelectTab);
+  handleSelectTabRef.current = handleSelectTab;
+  const activeTabRef = React.useRef(activeTab);
+  activeTabRef.current = activeTab;
+  const recordPageViewRef = React.useRef(recordPageView);
+  recordPageViewRef.current = recordPageView;
 
-  // High-Security Secret Ghost Typing Listener
-  // User simply types "loveystudio" or "lovey77" anywhere on the screen (outside form inputs)
+  useEffect(() => {
+    const activeRouteTab = getActiveTabFromLocation();
+    const currentState =
+      typeof window.history.state === "object" && window.history.state !== null
+        ? window.history.state
+        : {};
+    const normalizedPath = normalizePath(window.location.pathname);
+    const url = `${normalizedPath}${window.location.search}${window.location.hash}`;
+
+    window.history.replaceState({ ...currentState, tab: activeRouteTab }, "", url);
+    if (window.location.pathname !== normalizedPath) setActiveTab(activeRouteTab);
+
+    const handlePopState = () => {
+      const tab = getActiveTabFromLocation();
+      setActiveTab(tab);
+      recordPageViewRef.current(tab);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setIsHeroStatusLoading(false);
+      return;
+    }
+
+    let isCurrent = true;
+    const loadHeroStatus = async () => {
+      const { data, error } = await requireSupabase()
+        .from("site_settings")
+        .select("value")
+        .eq("key", "hero_open_for_projects")
+        .maybeSingle();
+
+      if (!isCurrent) return;
+      if (error) {
+        console.error("Failed to load hero availability status:", error.message);
+      } else if (data) {
+        setIsHeroOpenForProjects(data.value !== false);
+      }
+      setIsHeroStatusLoading(false);
+    };
+
+    void loadHeroStatus();
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
+
+  // Secret Ghost Typing Listener
   useEffect(() => {
     let keyBuffer = "";
     let timer: NodeJS.Timeout | null = null;
-    const SECRET_SEQUENCES = ["loveystudio", "lovey77", "loveymaster"];
+    const SECRET_SEQUENCES = ["loveystudio", "loveymaster"];
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ignore when user is actively typing in input / textarea
@@ -75,7 +176,7 @@ export default function App() {
         for (const secret of SECRET_SEQUENCES) {
           if (keyBuffer.endsWith(secret)) {
             keyBuffer = "";
-            setActiveTab("admin");
+            handleSelectTabRef.current("admin");
             setToastMessage("관리자 보안 게이트가 열렸습니다.");
             break;
           }
@@ -102,7 +203,7 @@ export default function App() {
       const hash = window.location.hash.toLowerCase();
       const search = window.location.search.toLowerCase();
       if (hash === "#gate-lovey-77" || search.includes("access=lovey_master")) {
-        setActiveTab("admin");
+        handleSelectTabRef.current("admin");
         setToastMessage("보안 키 인증: 관리자 모드 진입");
       }
     };
@@ -111,30 +212,8 @@ export default function App() {
     return () => window.removeEventListener("hashchange", checkSecretURL);
   }, []);
 
-  // Global Anti-Theft & Right-Click / PrintScreen / Mobile Screenshot Protection
+  // Preserve basic content protections without interfering with screenshots.
   useEffect(() => {
-    let restoreTimeout: NodeJS.Timeout | null = null;
-
-    const triggerCaptureProtection = (reason: string = "화면 캡처") => {
-      // 1. Immediately overwrite clipboard with copyright notice
-      try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard
-            .writeText(
-              "🔒 [lovey 저작권 안내] 본 포트폴리오 작업물의 무단 캡처, 복제 및 도용은 저작권법에 의해 엄격히 금지되어 있습니다. (All Rights Reserved © lovey)",
-            )
-            .catch(() => {});
-        }
-      } catch {
-        // Ignore
-      }
-
-      // 2. Instantly show pitch-black anti-capture shield (0ms latency to ruin any capture buffer)
-      setIsCaptureShieldActive(true);
-      setToastMessage(`🔒 ${reason}가 감지되어 화면이 보호 처리되었습니다.`);
-    };
-
-    // 1. Block Context Menu (Right-Click)
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
       setToastMessage(
@@ -142,8 +221,9 @@ export default function App() {
       );
     };
 
-    // 2. Block Image Dragging / Dropping
     const handleDragStart = (e: DragEvent) => {
+      if (activeTabRef.current === "admin") return;
+
       const target = e.target as HTMLElement;
       if (
         target &&
@@ -155,126 +235,12 @@ export default function App() {
       }
     };
 
-    // 3. Block Keyboard shortcuts (PrintScreen, Ctrl+S, Ctrl+P, Mac Screenshots, Snipping Tool)
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // PrintScreen key (Windows/Linux)
-      if (
-        e.key === "PrintScreen" ||
-        e.code === "PrintScreen" ||
-        e.keyCode === 44
-      ) {
-        try {
-          e.preventDefault();
-        } catch {}
-        triggerCaptureProtection("PrintScreen 캡처");
-        return;
-      }
-
-      // Ctrl + S or Cmd + S (Save Page)
-      if ((e.ctrlKey || e.metaKey) && (e.key === "s" || e.key === "S")) {
-        e.preventDefault();
-        setToastMessage("🔒 작업물 저장이 제한되어 있습니다.");
-        return;
-      }
-
-      // Ctrl + P or Cmd + P (Print / PDF save)
-      if ((e.ctrlKey || e.metaKey) && (e.key === "p" || e.key === "P")) {
-        try {
-          e.preventDefault();
-        } catch {}
-        triggerCaptureProtection("화면 인쇄");
-        return;
-      }
-
-      // Mac Screenshot shortcuts: Cmd+Shift+3, Cmd+Shift+4, Cmd+Shift+5
-      if (
-        (e.metaKey || e.ctrlKey) &&
-        e.shiftKey &&
-        (e.key === "3" ||
-          e.key === "4" ||
-          e.key === "5" ||
-          e.key === "$" ||
-          e.key === "%" ||
-          e.key === "#")
-      ) {
-        try {
-          e.preventDefault();
-        } catch {}
-        triggerCaptureProtection("Mac 화면 캡처");
-        return;
-      }
-
-      // Windows Snipping tool shortcut: Win+Shift+S or Ctrl+Shift+S
-      if (
-        (e.ctrlKey || e.metaKey) &&
-        e.shiftKey &&
-        (e.key === "s" || e.key === "S")
-      ) {
-        try {
-          e.preventDefault();
-        } catch {}
-        triggerCaptureProtection("캡처 도구");
-        return;
-      }
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (
-        e.key === "PrintScreen" ||
-        e.code === "PrintScreen" ||
-        e.keyCode === 44
-      ) {
-        triggerCaptureProtection("PrintScreen 캡처");
-      }
-    };
-
-    // 4. Mobile & Desktop App Switcher / Screenshot Blur Protection
-    // Mobile screenshot triggers app blur/visibility change (Volume+Power, 3-finger swipe, notification drag)
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "hidden") {
-        setIsCaptureShieldActive(true);
-      }
-    };
-
-    const handleWindowBlur = () => {
-      // Instantly blank screen when focus is lost (e.g. mobile screenshot overlay or snippet tool)
-      setIsCaptureShieldActive(true);
-    };
-
-    const handleWindowFocus = () => {
-      // When user returns, keep shield for a brief safety moment then auto-unlock if desired
-      if (restoreTimeout) clearTimeout(restoreTimeout);
-      restoreTimeout = setTimeout(() => {
-        // Allow user to tap/click to unlock
-      }, 1000);
-    };
-
-    // 5. Mobile multi-finger screenshot gesture detection (3 or more fingers swipe)
-    const handleTouchStart = (e: TouchEvent) => {
-      if (e.touches && e.touches.length >= 3) {
-        triggerCaptureProtection("모바일 제스처 캡처");
-      }
-    };
-
     window.addEventListener("contextmenu", handleContextMenu);
     window.addEventListener("dragstart", handleDragStart);
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("blur", handleWindowBlur);
-    window.addEventListener("focus", handleWindowFocus);
-    window.addEventListener("touchstart", handleTouchStart, { passive: true });
 
     return () => {
       window.removeEventListener("contextmenu", handleContextMenu);
       window.removeEventListener("dragstart", handleDragStart);
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("blur", handleWindowBlur);
-      window.removeEventListener("focus", handleWindowFocus);
-      window.removeEventListener("touchstart", handleTouchStart);
-      if (restoreTimeout) clearTimeout(restoreTimeout);
     };
   }, []);
 
@@ -286,6 +252,47 @@ export default function App() {
 
   const handleShowToast = (msg: string) => {
     setToastMessage(msg);
+  };
+
+  const handleToggleHeroStatus = async () => {
+    if (!isAuthenticated || isHeroStatusLoading || isHeroStatusSaving) return;
+
+    const nextStatus = !isHeroOpenForProjects;
+    setIsHeroStatusSaving(true);
+    try {
+      const { error } = await requireSupabase()
+        .from("site_settings")
+        .upsert(
+          { key: "hero_open_for_projects", value: nextStatus },
+          { onConflict: "key" },
+        );
+      if (error) {
+        console.error("Failed to update hero availability status:", {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+        });
+        if (["PGRST204", "PGRST205", "42P01"].includes(error.code)) {
+          handleShowToast("Supabase 테이블 설정이 반영되지 않았습니다. 최신 마이그레이션을 적용해 주세요.");
+        } else if (error.code === "42501") {
+          handleShowToast("Supabase 수정 권한을 확인해 주세요. 최신 마이그레이션과 profiles의 admin 역할이 필요합니다.");
+        } else {
+          handleShowToast(`상태 변경 저장 실패 [${error.code}]: ${error.message}`);
+        }
+        return;
+      }
+
+      setIsHeroOpenForProjects(nextStatus);
+      handleShowToast(
+        nextStatus ? "프로젝트 문의 상태를 열었습니다." : "프로젝트 문의 상태를 닫았습니다.",
+      );
+    } catch (error) {
+      console.error("Failed to update hero availability status:", error);
+      handleShowToast("상태 변경 저장 중 연결 오류가 발생했습니다. 다시 시도해 주세요.");
+    } finally {
+      setIsHeroStatusSaving(false);
+    }
   };
 
   // Derive current projects according to the selected test scenario
@@ -305,7 +312,12 @@ export default function App() {
   }, [projects, testScenario]);
 
   return (
-    <div className="relative min-h-screen bg-[#fafafc] text-neutral-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white pb-16 sm:pb-0">
+    <div
+      className={`relative min-h-screen w-full min-w-0 bg-[#fafafc] text-neutral-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white pb-16 sm:pb-0 ${activeTab === "admin" ? "" : "copy-protection"}`}
+      onDragStart={(event) => {
+        if (activeTab !== "admin") event.preventDefault();
+      }}
+    >
       {/* Background Architectural Grid Lines & Watermarks */}
       <BackgroundGrid
         watermarkPosition={
@@ -325,13 +337,17 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-grow">
+      <main className="min-w-0 flex-grow">
         {activeTab === "home" && (
           <div className="flex flex-col">
             {/* Hero Section matching Screenshot 1 */}
             <HeroSection
               onExploreWorks={() => handleSelectTab("works")}
               onGetInTouch={() => setIsAIConsultantOpen(true)}
+              isOpenForProjects={isHeroOpenForProjects}
+              canToggleStatus={isAuthenticated}
+              isStatusSaving={isHeroStatusLoading || isHeroStatusSaving}
+              onToggleStatus={handleToggleHeroStatus}
             />
 
             {/* Curated Selected Works matching Screenshot 1 */}
@@ -495,49 +511,6 @@ export default function App() {
           handleOpenProject(project);
         }}
       />
-
-      {/* Anti-Screen-Capture Visual Shield Overlay (Instant Blackout to Ruin Mobile & PC Screenshots) */}
-      <AnimatePresence>
-        {isCaptureShieldActive && (
-          <motion.div
-            id="anti-capture-shield"
-            initial={{ opacity: 1 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.1 }}
-            onClick={() => setIsCaptureShieldActive(false)}
-            className="fixed inset-0 z-[999999] bg-black flex flex-col items-center justify-center text-white p-6 select-none cursor-pointer"
-          >
-            <div
-              className="flex flex-col items-center text-center max-w-sm"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="h-16 w-16 rounded-3xl bg-red-500/15 border border-red-500/30 flex items-center justify-center text-red-400 mb-4 shadow-2xl">
-                <ShieldAlert size={32} />
-              </div>
-              <span className="font-display text-[11px] font-mono font-bold tracking-widest text-red-400 uppercase mb-1">
-                SECURITY ALERT
-              </span>
-              <h2 className="font-display text-lg sm:text-xl font-extrabold text-white mb-2 tracking-tight">
-                화면 캡처가 차단되었습니다
-              </h2>
-              <p className="text-xs leading-relaxed text-neutral-400 mb-6">
-                본 포트폴리오 작업물은{" "}
-                <strong className="text-white font-bold">© lovey</strong>의
-                저작권 보호를 받는 창작물입니다. 무단 캡처 및 복제는 엄격히
-                제한됩니다.
-              </p>
-              <button
-                type="button"
-                onClick={() => setIsCaptureShieldActive(false)}
-                className="rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-6 py-2.5 text-xs font-bold transition border border-neutral-700 shadow-md cursor-pointer"
-              >
-                화면 터치하여 계속 보기
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Global Toast */}
       <Toast message={toastMessage} onClose={() => setToastMessage(null)} />

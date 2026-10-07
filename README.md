@@ -1,4 +1,4 @@
-# LoveyPortfolio
+# Staylovey
 
 Portfolio frontend built with React, Vite, and TypeScript. It deploys as a static site to Vercel and uses Supabase for PostgreSQL, Auth, Storage, analytics, and Edge Functions.
 
