@@ -282,9 +282,18 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
     setIsLoading(true);
 
     try {
+      const firstUserMessageIndex = newMessages.findIndex(
+        (message) => message.role === "user",
+      );
+      const conversationMessages = newMessages
+        .slice(firstUserMessageIndex)
+        .slice(-11);
       const requestBody = {
         language,
-        messages: newMessages.map((m) => ({ role: m.role, text: m.text })),
+        messages: conversationMessages.map((m) => ({
+          role: m.role,
+          text: m.text,
+        })),
         projects: projects.slice(0, 40).map((project) => ({
           id: project.id,
           title: project.title,

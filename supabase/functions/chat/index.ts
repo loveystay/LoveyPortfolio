@@ -158,7 +158,7 @@ Deno.serve(async (request) => {
       `Public project catalog: ${JSON.stringify(projects)}`,
     ].join("\n");
 
-    const model = Deno.env.get("GEMINI_MODEL") ?? "gemini-3.6-flash";
+    const model = Deno.env.get("GEMINI_MODEL")?.trim() || "gemini-3.6-flash";
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
       {
@@ -182,7 +182,10 @@ Deno.serve(async (request) => {
     );
 
     if (!response.ok) {
-      console.error(`Gemini request failed with status ${response.status}`);
+      const errorDetails = await response.text();
+      console.error(
+        `Gemini request failed with status ${response.status}: ${errorDetails.slice(0, 1200)}`,
+      );
       return Response.json(fallback(language), {
         status: 502,
         headers: corsHeaders,
