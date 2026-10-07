@@ -151,6 +151,7 @@ export interface Translations {
     copied: string;
     close: string;
     questions: string[];
+    answers: string[];
   };
   footer: {
     tagline: string;
@@ -334,6 +335,15 @@ export const TRANSLATIONS: Record<Language, Translations> = {
         "견적 산정 방식과 협업 진행 절차가 궁금합니다.",
         "작업 착수 및 결제 기준이 궁금합니다.",
         "정기 월 단위 영상 편집 계약도 가능한가요?",
+      ],
+      answers: [
+        "롱폼 영상은 **완성본 30분 이상 기준 약 2주** 정도 소요됩니다. 원본 분량과 편집 난이도, 작업 일정에 따라 달라질 수 있어 정확한 일정은 자료와 함께 문의해 주시면 안내해 드리겠습니다.",
+        "숏폼/릴스는 보통 **약 3일~1주** 정도 소요됩니다. 영상 개수와 편집 범위에 따라 일정이 달라질 수 있습니다.",
+        "상세페이지 의뢰 시 아래 자료를 준비해 주세요.\n\n- 원하는 분위기와 참고 레퍼런스\n- 고화질 제품 사진\n- 강조할 제품 특징과 필수 삽입 문구\n\n자료가 정리되지 않았더라도 현재 보유하신 내용을 바탕으로 상담하실 수 있습니다.",
+        "기본 **무상 수정 2회**를 지원합니다. 기획 방향을 처음부터 크게 바꾸는 전면 수정은 기본 수정 범위에 포함되지 않을 수 있으니, 요청 내용을 구체적으로 정리해 전달해 주세요. 추가 수정 범위와 비용은 진행 전에 협의합니다.",
+        "견적은 작업 종류, 영상 분량이나 페이지 구성, 필요한 편집 범위와 일정 등을 확인한 뒤 안내해 드립니다. 문의 내용을 확인하고 작업 범위와 일정을 조율한 다음, 견적 및 결제 안내를 드립니다. 구체적인 금액은 프로젝트 내용을 보내주시면 확인해 드리겠습니다.",
+        "작업은 **입금 확인 후 착수**하며, 대기 순서는 입금 순서에 따라 배정됩니다. 작업 범위와 일정, 견적을 먼저 확인한 뒤 결제를 진행해 주세요.",
+        "월 단위 정기 편집은 **작업량과 업로드 주기, 필요한 범위를 확인해 상담**해 드립니다. 원하시는 월간 분량과 영상 스타일을 알려주시면 진행 가능 여부와 견적을 안내해 드리겠습니다.",
       ],
     },
     footer: {
@@ -637,6 +647,15 @@ export const TRANSLATIONS: Record<Language, Translations> = {
         "What are the payment and project kickoff terms?",
         "Is monthly retainer video editing available?",
       ],
+      answers: [
+        "Long-form editing takes **about 2 weeks for a finished video over 30 minutes**. The schedule can vary with the source footage, editing complexity, and current workload. Contact me with the project details for a more precise estimate.",
+        "Short-form videos and Reels usually take **about 3 days to 1 week**. Timing depends on the number of videos and the editing scope.",
+        "For a product page, please prepare:\n\n- Your preferred mood and reference examples\n- High-resolution product photos\n- Key product features and required copy\n\nIf you do not have everything ready, you can still start an inquiry with the materials you have.",
+        "The standard package includes **2 rounds of complimentary revisions**. A major change in direction may fall outside the included revision scope. Please send clear, consolidated feedback; any additional revision scope and cost will be discussed before proceeding.",
+        "Quotes are based on the type of work, video length or page scope, editing requirements, and schedule. After reviewing your inquiry, I will confirm the scope and timing and then share the quote and payment details. Send the project details for a specific estimate.",
+        "Work begins **after payment is confirmed**. Projects are scheduled in payment order. Please confirm the scope, schedule, and quote before payment.",
+        "Monthly editing arrangements can be discussed based on the **volume, upload schedule, and scope**. Share your expected monthly volume and preferred style, and I can confirm availability and provide a quote.",
+      ],
     },
     footer: {
       tagline: "Video Editor & E-commerce Product Page Designer",
@@ -930,6 +949,15 @@ export const TRANSLATIONS: Record<Language, Translations> = {
         "見積もり算出方法と制作の流れを教えてください。",
         "作業着手と支払い基準について教えてください。",
         "月額契約での定期動画編集は可能ですか？",
+      ],
+      answers: [
+        "長編動画は**完成尺30分以上を基準に約2週間**が目安です。素材の量や編集内容、制作状況によって前後するため、詳しい日程は案件内容を添えてお問い合わせください。",
+        "ショート動画・リールは通常**約3日〜1週間**が目安です。制作本数や編集範囲によって日程が変わります。",
+        "商品LPのご依頼では、以下をご用意ください。\n\n- 希望する雰囲気や参考資料\n- 高解像度の商品写真\n- 商品の訴求ポイントや必須掲載文言\n\nすべて揃っていない場合も、お手元の資料をもとにご相談いただけます。",
+        "基本プランでは**無料修正2回**に対応しています。企画の方向性を大きく変更する全面的な修正は、基本範囲に含まれない場合があります。修正内容をまとめてお伝えください。追加修正の範囲と費用は事前にご相談します。",
+        "お見積りは制作内容、動画の長さやページ構成、必要な作業範囲、希望納期などを確認してご案内します。お問い合わせ内容を確認後、作業範囲と日程を調整し、お見積りとお支払い方法をご案内します。具体的な金額は案件内容をお送りください。",
+        "制作は**お支払い確認後に着手**し、作業順はお支払い順にご案内します。作業範囲・日程・お見積りをご確認のうえ、お支払いください。",
+        "月単位の定期編集は、**制作本数や投稿頻度、作業範囲を確認してご相談**いただけます。月間の本数やご希望の編集スタイルをお知らせいただければ、対応可否とお見積りをご案内します。",
       ],
     },
     footer: {

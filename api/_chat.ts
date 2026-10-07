@@ -69,6 +69,8 @@ export async function generateChatResponse(
   }
   if (!apiKey) return { status: 503, data: fallback(language) };
 
+  const selectedModel = model.trim() || 'gemini-3.6-flash';
+
   const messages = body.messages
     .slice(-12)
     .flatMap((item) => {
@@ -94,7 +96,7 @@ export async function generateChatResponse(
 
   try {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(selectedModel)}:generateContent`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
@@ -110,13 +112,22 @@ export async function generateChatResponse(
       },
     );
 
-    if (!response.ok) return { status: 502, data: fallback(language) };
+    if (!response.ok) {
+      const errorDetails = await response.text();
+      console.error(
+        `[Gemini] HTTP ${response.status}: ${errorDetails.slice(0, 1200)}`,
+      );
+      return { status: 502, data: fallback(language) };
+    }
     const payload = await response.json();
     const rawText = payload.candidates?.[0]?.content?.parts
       ?.map((part: { text?: string }) => part.text ?? '')
       .join('')
       .trim();
-    if (!rawText) return { status: 502, data: fallback(language) };
+    if (!rawText) {
+      console.error('[Gemini] Response did not contain generated text.');
+      return { status: 502, data: fallback(language) };
+    }
 
     const normalized = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
     const parsed = JSON.parse(normalized) as Record<string, unknown>;
@@ -133,7 +144,11 @@ export async function generateChatResponse(
       status: 200,
       data: { reply, recommendedProjectIds, shouldContact: parsed.shouldContact === true },
     };
-  } catch {
+  } catch (error) {
+    console.error(
+      '[Gemini] Chat request failed:',
+      error instanceof Error ? error.message : 'Unknown error',
+    );
     return { status: 502, data: fallback(language) };
   }
 }
