@@ -110,7 +110,7 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </nav>
 
-        {/* Right Action Area: Language Selector + AI Consult + LET'S TALK */}
+        {/* Right Action Area: Language Selector + AI Consult + START A PROJECT */}
         <div className="hidden md:flex items-center gap-2.5">
           <LanguageSelector variant="header" />
           {onOpenAIConsultant && (

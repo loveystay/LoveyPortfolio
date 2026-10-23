@@ -91,31 +91,26 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   const projectTypeOptions: {
     type: ProjectType;
     label: string;
-    sublabel: string;
     icon: React.ReactNode;
   }[] = [
     {
       type: 'youtube_long',
       label: '유튜브 롱폼',
-      sublabel: '스토리텔링 & 컷/자막/모션',
       icon: <Video size={18} />,
     },
     {
       type: 'shortform',
       label: '숏폼 (쇼츠/릴스/틱톡)',
-      sublabel: '트렌디한 호흡 & 모션 그래픽',
       icon: <Film size={18} />,
     },
     {
       type: 'ecommerce_detail',
       label: '상세페이지 기획 & 디자인',
-      sublabel: 'USP 중심 고전환 디자인',
       icon: <FileSpreadsheet size={18} />,
     },
     {
       type: 'other',
       label: '기타 프로젝트',
-      sublabel: '종합 브랜딩, 맞춤형 제작',
       icon: <HelpCircle size={18} />,
     },
   ];
@@ -233,7 +228,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
 ${formData.ecommerceUsp || '-'}
 • 제공 가능 리소스: ${formData.ecommerceResources.length > 0 ? formData.ecommerceResources.join(', ') : '없음'}
 • 상세페이지 자료 드라이브 URL: ${formData.ecommerceDriveUrl?.trim() || '이메일(contact@staylovey.com) 별도 송부 또는 미입력'}
-• 예상 작업 분량: ${formData.ecommerceWorkload || '미정'}`.trim();
+• 예상 작업 분량 (1080px 기준): ${formData.ecommerceWorkload || '미정'}`.trim();
     } else {
       section3Details = `
 • 문의 세부 내용:
@@ -255,10 +250,10 @@ ${formData.otherDetails || '-'}`.trim();
 ${section3Details}
 
 ■ [섹션 4] 레퍼런스 및 스타일 가이드
-• 지향하는 무드 / 톤앤매너: ${formData.targetMood || '미입력'}
+• 지향하는 무드: ${formData.targetMood || '미입력'}
 • 참고 레퍼런스 링크 1: ${formData.referenceLink1 || '미입력'}
 • 참고 레퍼런스 링크 2: ${formData.referenceLink2 || '미입력'}
-• 지양 스타일 및 필수 주의사항: ${formData.avoidStyles || '없음'}
+• 필수 주의사항: ${formData.avoidStyles || '없음'}
 
 ■ [섹션 5] 일정 및 예산
 • 원본(자료) 전달 가능 일자: ${formData.rawMaterialDate || '미정'}
@@ -471,7 +466,7 @@ ${formData.additionalNotes || '없음'}
                             setErrors({ ...errors, companyOrChannel: '' });
                           }
                         }}
-                        placeholder="예: staylovey (또는 브랜드 / 채널명)"
+                        placeholder="staylovey (또는 업체 / 채널명)"
                         className={`w-full rounded-xl border bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all ${
                           errors.companyOrChannel
                             ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
@@ -502,7 +497,7 @@ ${formData.additionalNotes || '없음'}
                             setErrors({ ...errors, managerNameAndTitle: '' });
                           }
                         }}
-                        placeholder="예: 홍길동 팀장 / 마케팅 디렉터"
+                        placeholder="담당자 성함 및 직함"
                         className={`w-full rounded-xl border bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all ${
                           errors.managerNameAndTitle
                             ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
@@ -533,7 +528,7 @@ ${formData.additionalNotes || '없음'}
                             setErrors({ ...errors, contact: '' });
                           }
                         }}
-                        placeholder="예: 010-1234-5678 또는 contact@domain.com"
+                        placeholder="연락받으실 유선 번호 또는 이메일"
                         className={`w-full rounded-xl border bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all ${
                           errors.contact
                             ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
@@ -557,7 +552,7 @@ ${formData.additionalNotes || '없음'}
                         type="text"
                         value={formData.brandUrl}
                         onChange={(e) => setFormData({ ...formData, brandUrl: e.target.value })}
-                        placeholder="예: https://youtube.com/@staylovey 또는 웹사이트 링크"
+                        placeholder="브랜드 채널 또는 웹사이트 링크 (선택)"
                         className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
                       />
                     </div>
@@ -598,14 +593,14 @@ ${formData.additionalNotes || '없음'}
                               return updated;
                             });
                           }}
-                          className={`flex items-start gap-3.5 p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                          className={`flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
                             isSelected
                               ? 'border-indigo-500 bg-indigo-500/[0.08] text-white ring-1 ring-indigo-500/25 shadow-sm shadow-indigo-500/5'
                               : 'border-neutral-800 bg-[#0b0b0e] text-neutral-300 hover:border-neutral-700 hover:bg-neutral-800/40'
                           }`}
                         >
                           <div
-                            className={`p-2 rounded-lg shrink-0 mt-0.5 transition-colors ${
+                            className={`p-2 rounded-lg shrink-0 transition-colors ${
                               isSelected
                                 ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30'
                                 : 'bg-neutral-800/80 text-neutral-400'
@@ -613,24 +608,19 @@ ${formData.additionalNotes || '없음'}
                           >
                             {opt.icon}
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs sm:text-sm font-semibold truncate text-white">
-                                {opt.label}
-                              </span>
-                              <span
-                                className={`h-4 w-4 rounded-full border flex items-center justify-center shrink-0 ml-1.5 transition-all ${
-                                  isSelected
-                                    ? 'border-indigo-500 bg-indigo-600 text-white'
-                                    : 'border-neutral-700 bg-neutral-900'
-                                }`}
-                              >
-                                {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
-                              </span>
-                            </div>
-                            <p className="mt-1 text-[11px] text-neutral-400 leading-tight">
-                              {opt.sublabel}
-                            </p>
+                          <div className="flex-1 min-w-0 flex items-center justify-between">
+                            <span className="text-xs sm:text-sm font-semibold truncate text-white">
+                              {opt.label}
+                            </span>
+                            <span
+                              className={`h-4 w-4 rounded-full border flex items-center justify-center shrink-0 ml-1.5 transition-all ${
+                                isSelected
+                                  ? 'border-indigo-500 bg-indigo-600 text-white'
+                                  : 'border-neutral-700 bg-neutral-900'
+                              }`}
+                            >
+                              {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                            </span>
                           </div>
                         </button>
                       );
@@ -679,7 +669,7 @@ ${formData.additionalNotes || '없음'}
                                 setErrors({ ...errors, videoRawFootage: '' });
                               }
                             }}
-                            placeholder="예: 4K 촬영본 약 1시간 분량 / 30GB"
+                            placeholder="원본 촬영본 분량 (러닝타임 또는 용량)"
                             className={`w-full rounded-xl border bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all ${
                               errors.videoRawFootage
                                 ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
@@ -710,11 +700,7 @@ ${formData.additionalNotes || '없음'}
                                 setErrors({ ...errors, videoTargetLength: '' });
                               }
                             }}
-                            placeholder={
-                              formData.projectType === 'shortform'
-                                ? '예: 30초 ~ 60초 내외'
-                                : '예: 10분 ~ 15분 내외'
-                            }
+                            placeholder="최종 납품 희망 영상 길이"
                             className={`w-full rounded-xl border bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all ${
                               errors.videoTargetLength
                                 ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
@@ -742,7 +728,7 @@ ${formData.additionalNotes || '없음'}
                           type="text"
                           value={formData.videoDriveUrl || ''}
                           onChange={(e) => setFormData({ ...formData, videoDriveUrl: e.target.value })}
-                          placeholder="구글 드라이브, Dropbox 공유 링크 (권한: 링크가 있는 모든 사용자 보기 가능)"
+                          placeholder="공유 드라이브 링크 (구글 드라이브, Dropbox 등)"
                           className="w-full rounded-lg border border-neutral-800 bg-[#121217] px-3.5 py-2 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
                         />
                         <p className="text-[11px] text-neutral-400 leading-relaxed pt-0.5">
@@ -794,7 +780,7 @@ ${formData.additionalNotes || '없음'}
                           type="text"
                           value={formData.videoFrequency}
                           onChange={(e) => setFormData({ ...formData, videoFrequency: e.target.value })}
-                          placeholder="예: 단건 의뢰 / 주 1회 정기 업로드 / 월 4편 정기 계약"
+                          placeholder="단건 또는 정기 업로드 주기를 적어주세요 (선택)"
                           className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
                         />
                       </div>
@@ -821,7 +807,7 @@ ${formData.additionalNotes || '없음'}
                               setErrors({ ...errors, ecommerceUsp: '' });
                             }
                           }}
-                          placeholder="예: 기능성 스킨케어 앰플 — 특허 성분 흡수율 및 임상 전후 데이터 시각화 필요"
+                          placeholder="제품군 및 주요 셀링 포인트(USP)를 적어주세요"
                           className={`w-full rounded-xl border bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all resize-none ${
                             errors.ecommerceUsp
                               ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
@@ -861,7 +847,7 @@ ${formData.additionalNotes || '없음'}
                           type="text"
                           value={formData.ecommerceDriveUrl || ''}
                           onChange={(e) => setFormData({ ...formData, ecommerceDriveUrl: e.target.value })}
-                          placeholder="구글 드라이브, Dropbox, 네이버 MYBOX 공유 링크"
+                          placeholder="공유 드라이브 링크 (구글 드라이브, Dropbox 등)"
                           className="w-full rounded-lg border border-neutral-800 bg-[#121217] px-3.5 py-2 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
                         />
                       </div>
@@ -903,14 +889,14 @@ ${formData.additionalNotes || '없음'}
                       {/* 예상 작업 분량 */}
                       <div className="space-y-1.5 pt-1">
                         <label className="flex items-center justify-between text-xs font-medium text-neutral-300">
-                          <span>예상 작업 분량</span>
+                          <span>예상 작업 분량 (1080px 기준)</span>
                           <span className="text-[10px] text-neutral-500 font-normal bg-neutral-800/80 px-1.5 py-0.5 rounded">선택</span>
                         </label>
                         <input
                           type="text"
                           value={formData.ecommerceWorkload}
                           onChange={(e) => setFormData({ ...formData, ecommerceWorkload: e.target.value })}
-                          placeholder="예: 모바일 가로 860px 기준 8~12개 섹션 내외"
+                          placeholder="1080px 기준 희망 길이나 컷 수를 적어주세요"
                           className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
                         />
                       </div>
@@ -935,7 +921,7 @@ ${formData.additionalNotes || '없음'}
                             setErrors({ ...errors, otherDetails: '' });
                           }
                         }}
-                        placeholder="기획 의도, 프로젝트 목표, 필요하신 협업 범위(브랜딩/모션/종합 콘텐츠 등)를 구체적으로 남겨주세요."
+                        placeholder="문의 세부 내용을 적어주세요"
                         className={`w-full rounded-xl border bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all resize-none ${
                           errors.otherDetails
                             ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
@@ -968,17 +954,17 @@ ${formData.additionalNotes || '없음'}
                   </div>
 
                   <div className="space-y-4">
-                    {/* 지향하는 무드 / 톤앤매너 */}
+                    {/* 지향하는 무드 */}
                     <div className="space-y-1.5">
                       <label className="flex items-center justify-between text-xs font-medium text-neutral-300">
-                        <span>지향하는 무드 / 톤앤매너</span>
+                        <span>지향하는 무드</span>
                         <span className="text-[10px] text-neutral-500 font-normal bg-neutral-800/80 px-1.5 py-0.5 rounded">선택</span>
                       </label>
                       <input
                         type="text"
                         value={formData.targetMood}
                         onChange={(e) => setFormData({ ...formData, targetMood: e.target.value })}
-                        placeholder="예: 미니멀하고 신뢰감 있는 톤 / 빠른 템포의 예능형 / 감성적 시네마틱 룩"
+                        placeholder="지향하시는 무드를 적어주세요"
                         className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
                       />
                     </div>
@@ -997,7 +983,7 @@ ${formData.additionalNotes || '없음'}
                           type="text"
                           value={formData.referenceLink1}
                           onChange={(e) => setFormData({ ...formData, referenceLink1: e.target.value })}
-                          placeholder="예: https://youtube.com/watch?v=... 또는 웹페이지 링크"
+                          placeholder="참고 레퍼런스 URL (선택)"
                           className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
                         />
                       </div>
@@ -1021,17 +1007,17 @@ ${formData.additionalNotes || '없음'}
                       </div>
                     </div>
 
-                    {/* 지양하는 스타일 */}
+                    {/* 필수 주의사항 */}
                     <div className="space-y-1.5">
                       <label className="flex items-center justify-between text-xs font-medium text-neutral-300">
-                        <span>지양하는 스타일이나 필수 주의사항</span>
+                        <span>필수 주의사항</span>
                         <span className="text-[10px] text-neutral-500 font-normal bg-neutral-800/80 px-1.5 py-0.5 rounded">선택</span>
                       </label>
                       <input
                         type="text"
                         value={formData.avoidStyles}
                         onChange={(e) => setFormData({ ...formData, avoidStyles: e.target.value })}
-                        placeholder="예: 자극적인 자막 지양 / 브랜드 공식 CI 및 컬러 가이드라인 준수"
+                        placeholder="주의사항을 적어주세요"
                         className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
                       />
                     </div>
@@ -1182,7 +1168,7 @@ ${formData.additionalNotes || '없음'}
                       rows={3}
                       value={formData.additionalNotes}
                       onChange={(e) => setFormData({ ...formData, additionalNotes: e.target.value })}
-                      placeholder="작업 시 특별히 강조하고 싶은 점이나 협의가 필요한 사항을 자유롭게 적어주세요."
+                      placeholder="추가 요청사항이나 전달사항을 적어주세요"
                       className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all resize-none"
                     />
                   </div>

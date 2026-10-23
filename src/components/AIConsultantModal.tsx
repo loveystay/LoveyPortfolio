@@ -286,19 +286,6 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
 
             <div className="flex items-center gap-2">
               <button
-                type="button"
-                onClick={() => {
-                  if (onOpenStartProject) {
-                    onOpenStartProject();
-                  }
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shadow-xs cursor-pointer"
-                title="Start a Project"
-              >
-                <Sparkles size={12} className="text-indigo-200" />
-                <span>Start a Project</span>
-              </button>
-              <button
                 onClick={handleResetChat}
                 className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-400 hover:bg-neutral-200/70 hover:text-neutral-700 transition cursor-pointer"
                 title="Reset Chat"
@@ -503,7 +490,7 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
                 <div className="min-w-0">
                   <div className="text-xs font-bold text-white truncate">프로젝트 직접 의뢰하기</div>
                   <div className="text-[11px] text-neutral-400 truncate">
-                    맞춤 제원 폼을 통해 빠르고 정확한 견적을 확인하세요.
+                    맞춤 지원 폼을 통해 빠르고 정확한 견적을 확인하세요.
                   </div>
                 </div>
               </div>
