@@ -1,74 +1,335 @@
 import React, { useState } from 'react';
-import { X, Send, Copy, Check, Sparkles, MessageSquare } from 'lucide-react';
+import {
+  X,
+  Send,
+  Copy,
+  Check,
+  Sparkles,
+  Mail,
+  Video,
+  Film,
+  FileSpreadsheet,
+  HelpCircle,
+  Calendar,
+  DollarSign,
+  Link as LinkIcon,
+  AlertCircle,
+  ExternalLink,
+  RotateCcw
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ContactFormData } from '../types';
+import { ProjectType, StartProjectFormData } from '../types';
 
 interface ContactModalProps {
   isOpen: boolean;
   onClose: () => void;
   onShowToast: (message: string) => void;
+  initialData?: Partial<StartProjectFormData>;
 }
+
+const DEFAULT_FORM_DATA: StartProjectFormData = {
+  // [섹션 1] 기본 정보
+  companyOrChannel: '',
+  managerNameAndTitle: '',
+  contact: '',
+  brandUrl: '',
+
+  // [섹션 2] 프로젝트 유형
+  projectType: 'youtube_long',
+
+  // [섹션 3] 작업 세부 사항
+  // CASE 1: 영상
+  videoRawFootage: '',
+  videoTargetLength: '',
+  videoScope: ['컷편집', '자막', 'BGM·효과음'],
+  videoFrequency: '',
+
+  // CASE 2: 상세페이지
+  ecommerceUsp: '',
+  ecommerceResources: ['기획안 보유'],
+  ecommerceWorkload: '',
+
+  // CASE 3: 기타
+  otherDetails: '',
+
+  // [섹션 4] 레퍼런스
+  targetMood: '',
+  referenceLink1: '',
+  referenceLink2: '',
+  avoidStyles: '',
+
+  // [섹션 5] 일정 및 예산
+  rawMaterialDate: '',
+  firstDraftDate: '',
+  finalDeliveryDate: '',
+  budgetRange: '',
+
+  // [섹션 6] 기타
+  additionalNotes: '',
+};
 
 export const ContactModal: React.FC<ContactModalProps> = ({
   isOpen,
   onClose,
   onShowToast,
+  initialData,
 }) => {
-  const [formData, setFormData] = useState<ContactFormData>({
-    name: '',
-    email: '',
-    projectType: '유튜브 롱폼 영상 편집',
-    budget: '50만 원 ~ 100만 원',
-    timeline: '2~3주 이내',
-    message: '',
-  });
+  const [formData, setFormData] = useState<StartProjectFormData>(() => ({
+    ...DEFAULT_FORM_DATA,
+    ...initialData,
+  }));
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [formattedSummary, setFormattedSummary] = useState('');
   const [copied, setCopied] = useState(false);
 
-  const email = 'contact@staylovey.com';
+  const targetEmail = 'contact@staylovey.com';
 
-  const handleCopyEmail = async () => {
-    try {
-      if (navigator.clipboard) {
-        await navigator.clipboard.writeText(email);
-      }
-      setCopied(true);
-      onShowToast('이메일 주소가 클립보드에 복사되었습니다.');
-      setTimeout(() => setCopied(false), 2500);
-    } catch {
-      setCopied(true);
-      onShowToast('이메일 주소가 클립보드에 복사되었습니다.');
-      setTimeout(() => setCopied(false), 2500);
-    }
+  const projectTypeOptions: {
+    type: ProjectType;
+    label: string;
+    sublabel: string;
+    icon: React.ReactNode;
+  }[] = [
+    {
+      type: 'youtube_long',
+      label: '유튜브 롱폼',
+      sublabel: '영상 편집 (10분+ 기획 및 연출)',
+      icon: <Video size={18} />,
+    },
+    {
+      type: 'shortform',
+      label: '숏폼 영상 (쇼츠/릴스/틱톡)',
+      sublabel: '고밀도 후킹 & 트렌디한 모션',
+      icon: <Film size={18} />,
+    },
+    {
+      type: 'ecommerce_detail',
+      label: 'E-커머스 상세페이지',
+      sublabel: 'USP 기획 & 고전환 디자인',
+      icon: <FileSpreadsheet size={18} />,
+    },
+    {
+      type: 'other',
+      label: '기타 프로젝트',
+      sublabel: '브랜드 필름, 종합 솔루션 등',
+      icon: <HelpCircle size={18} />,
+    },
+  ];
+
+  const videoScopeOptions = [
+    '컷편집',
+    '자막',
+    '모션·CG',
+    'BGM·효과음',
+    '썸네일 포함 여부',
+  ];
+
+  const ecommerceResourceOptions = [
+    '기획안 보유',
+    '제품 연출컷·누끼컷 보유',
+    '원고/텍스트 보유',
+  ];
+
+  const handleScopeToggle = (item: string) => {
+    setFormData((prev) => {
+      const exists = prev.videoScope.includes(item);
+      const updated = exists
+        ? prev.videoScope.filter((s) => s !== item)
+        : [...prev.videoScope, item];
+      return { ...prev, videoScope: updated };
+    });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name || !formData.email) {
-      alert('성함과 연락 가능한 이메일을 입력해 주세요.');
-      return;
+  const handleResourceToggle = (item: string) => {
+    setFormData((prev) => {
+      const exists = prev.ecommerceResources.includes(item);
+      const updated = exists
+        ? prev.ecommerceResources.filter((r) => r !== item)
+        : [...prev.ecommerceResources, item];
+      return { ...prev, ecommerceResources: updated };
+    });
+  };
+
+  const validate = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    // [섹션 1] 필수 검증
+    if (!formData.companyOrChannel.trim()) {
+      newErrors.companyOrChannel = '업체/채널명을 입력해 주세요.';
+    }
+    if (!formData.managerNameAndTitle.trim()) {
+      newErrors.managerNameAndTitle = '담당자 성함 및 직함을 입력해 주세요.';
+    }
+    if (!formData.contact.trim()) {
+      newErrors.contact = '연락처(유선 또는 이메일)를 입력해 주세요.';
     }
 
+    // [섹션 3] 조건부 필수 검증
+    if (formData.projectType === 'youtube_long' || formData.projectType === 'shortform') {
+      if (!formData.videoRawFootage?.trim()) {
+        newErrors.videoRawFootage = '원본 촬영본 분량(러닝타임 또는 용량)을 입력해 주세요.';
+      }
+      if (!formData.videoTargetLength?.trim()) {
+        newErrors.videoTargetLength = '최종 납품 희망 영상 길이를 입력해 주세요.';
+      }
+    } else if (formData.projectType === 'ecommerce_detail') {
+      if (!formData.ecommerceUsp?.trim()) {
+        newErrors.ecommerceUsp = '제품군 및 주요 셀링 포인트(USP)를 작성해 주세요.';
+      }
+    } else if (formData.projectType === 'other') {
+      if (!formData.otherDetails?.trim()) {
+        newErrors.otherDetails = '문의 세부 내용을 직접 입력해 주세요.';
+      }
+    }
+
+    // [섹션 4] 필수 검증
+    if (!formData.referenceLink1.trim()) {
+      newErrors.referenceLink1 = '참고 레퍼런스 링크 1을 입력해 주세요.';
+    }
+
+    // [섹션 5] 필수 검증
+    if (!formData.finalDeliveryDate.trim()) {
+      newErrors.finalDeliveryDate = '최종 완료 및 납품 희망일을 입력해 주세요.';
+    }
+    if (!formData.budgetRange.trim()) {
+      newErrors.budgetRange = '책정 예산 범위를 입력해 주세요.';
+    }
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      onShowToast('필수 입력 항목을 확인해 주세요.');
+      // Find the first error element to scroll into view
+      const firstErrorKey = Object.keys(newErrors)[0];
+      const element = document.getElementById(`field-${firstErrorKey}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return false;
+    }
+
+    return true;
+  };
+
+  const generateProjectSummaryText = (): string => {
+    const typeLabel =
+      formData.projectType === 'youtube_long'
+        ? '(A) 영상 편집 - 유튜브 롱폼'
+        : formData.projectType === 'shortform'
+        ? '(B) 영상 편집 - 숏폼 (쇼츠/릴스/틱톡)'
+        : formData.projectType === 'ecommerce_detail'
+        ? '(C) E-커머스 상세페이지 기획 & 디자인'
+        : '(D) 기타 프로젝트';
+
+    let section3Details = '';
+    if (formData.projectType === 'youtube_long' || formData.projectType === 'shortform') {
+      section3Details = `
+• 원본 촬영본 분량: ${formData.videoRawFootage || '-'}
+• 최종 납품 희망 영상 길이: ${formData.videoTargetLength || '-'}
+• 작업 범위: ${formData.videoScope.length > 0 ? formData.videoScope.join(', ') : '미지정'}
+• 업로드 주기 / 의뢰 건수: ${formData.videoFrequency || '단건 또는 미정'}`.trim();
+    } else if (formData.projectType === 'ecommerce_detail') {
+      section3Details = `
+• 제품군 및 주요 셀링 포인트 (USP):
+${formData.ecommerceUsp || '-'}
+• 제공 가능 리소스: ${formData.ecommerceResources.length > 0 ? formData.ecommerceResources.join(', ') : '없음'}
+• 예상 작업 분량: ${formData.ecommerceWorkload || '미정'}`.trim();
+    } else {
+      section3Details = `
+• 문의 세부 내용:
+${formData.otherDetails || '-'}`.trim();
+    }
+
+    return `[Lovey Studio] Start a Project 프로젝트 의뢰 문의서
+
+■ [섹션 1] 기본 정보
+• 업체/채널명: ${formData.companyOrChannel}
+• 담당자 성함 / 직함: ${formData.managerNameAndTitle}
+• 연락처 (유선 / 메일): ${formData.contact}
+• 브랜드 및 채널 링크: ${formData.brandUrl || '미입력'}
+
+■ [섹션 2] 의뢰 프로젝트 유형
+• ${typeLabel}
+
+■ [섹션 3] 작업 세부 사항
+${section3Details}
+
+■ [섹션 4] 레퍼런스 및 스타일 가이드
+• 지향하는 무드 / 톤앤매너: ${formData.targetMood || '미입력'}
+• 참고 레퍼런스 링크 1 (필수): ${formData.referenceLink1}
+• 참고 레퍼런스 링크 2: ${formData.referenceLink2 || '없음'}
+• 지양 스타일 및 필수 주의사항: ${formData.avoidStyles || '없음'}
+
+■ [섹션 5] 일정 및 예산
+• 원본(자료) 전달 가능 일자: ${formData.rawMaterialDate || '미정'}
+• 1차 시안 희망 수령일: ${formData.firstDraftDate || '협의'}
+• 최종 완료 및 납품 희망일 (필수): ${formData.finalDeliveryDate}
+• 책정 예산 범위 (필수): ${formData.budgetRange}
+
+■ [섹션 6] 기타 요청 및 전달사항
+${formData.additionalNotes || '없음'}
+`;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+
     setIsSubmitting(true);
+    const summary = generateProjectSummaryText();
+    setFormattedSummary(summary);
+
+    // 1. Copy to clipboard automatically for safety
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(summary);
+      }
+    } catch {
+      // Ignore clipboard fallback
+    }
+
+    // 2. Build mailto link
+    const subject = `[프로젝트 문의] ${formData.companyOrChannel} (${formData.managerNameAndTitle}님)`;
+    const mailtoUrl = `mailto:${targetEmail}?subject=${encodeURIComponent(
+      subject
+    )}&body=${encodeURIComponent(summary)}`;
+
+    // 3. Trigger mail client
+    try {
+      window.location.href = mailtoUrl;
+    } catch {
+      // Fallback
+    }
+
     setTimeout(() => {
       setIsSubmitting(false);
       setIsSubmitted(true);
-      onShowToast(`문의가 정상적으로 접수되었습니다. 감사합니다, ${formData.name}님.`);
-    }, 900);
+      onShowToast('문의 내용이 클립보드에 복사되었으며 메일 앱이 실행되었습니다.');
+    }, 400);
+  };
+
+  const handleCopySummary = async () => {
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(formattedSummary);
+      }
+      setCopied(true);
+      onShowToast('문의 내용이 클립보드에 복사되었습니다.');
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      setCopied(true);
+      onShowToast('클립보드에 복사되었습니다.');
+      setTimeout(() => setCopied(false), 2500);
+    }
   };
 
   const handleReset = () => {
     setIsSubmitted(false);
-    setFormData({
-      name: '',
-      email: '',
-      projectType: '유튜브 롱폼 영상 편집',
-      budget: '50만 원 ~ 100만 원',
-      timeline: '2~3주 이내',
-      message: '',
-    });
+    setFormData(DEFAULT_FORM_DATA);
+    setErrors({});
     onClose();
   };
 
@@ -76,197 +337,765 @@ export const ContactModal: React.FC<ContactModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-hidden">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="fixed inset-0 bg-neutral-950/70 backdrop-blur-md"
+          className="fixed inset-0 bg-neutral-950/80 backdrop-blur-md"
         />
 
-        {/* Modal Content */}
+        {/* Modal Window */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 15 }}
+          initial={{ opacity: 0, scale: 0.96, y: 12 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="relative z-10 w-full max-w-2xl overflow-hidden rounded-3xl bg-white p-6 sm:p-10 shadow-2xl border border-neutral-200"
+          exit={{ opacity: 0, scale: 0.96, y: 12 }}
+          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          className="relative z-10 flex flex-col h-[94vh] max-h-[920px] w-full max-w-3xl overflow-hidden rounded-3xl bg-neutral-900 border border-neutral-800 text-neutral-100 shadow-2xl will-change-transform"
         >
-          {/* Close button */}
-          <button
-            onClick={onClose}
-            className="absolute top-6 right-6 flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200 hover:text-neutral-950 transition cursor-pointer"
-            aria-label="닫기"
-          >
-            <X size={18} />
-          </button>
-
-          {isSubmitted ? (
-            <div className="py-12 text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-6">
-                <Check size={32} />
-              </div>
-              <h3 className="font-display text-3xl font-black text-neutral-950">
-                문의가 접수되었습니다
-              </h3>
-              <p className="mt-3 text-sm text-neutral-600 max-w-md mx-auto leading-relaxed">
-                감사합니다, <strong className="text-neutral-900">{formData.name}</strong>님. 남겨주신 프로젝트 내용을 확인한 후 24시간 이내에 빠른 회신을 드리겠습니다.
-              </p>
-              <div className="mt-8">
-                <button
-                  onClick={handleReset}
-                  className="rounded-full bg-blue-600 px-8 py-3 text-xs font-bold text-white uppercase tracking-wider hover:bg-blue-700 transition cursor-pointer"
-                >
-                  확인
-                </button>
-              </div>
-            </div>
-          ) : (
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-neutral-800/80 bg-neutral-950/60 px-6 py-4.5 backdrop-blur-md shrink-0">
             <div>
-              <div className="flex items-center gap-2 text-xs font-mono-tag font-bold tracking-widest text-blue-600 uppercase">
-                <Sparkles size={14} /> PROJECT INQUIRY
+              <div className="flex items-center gap-2">
+                <span className="flex h-2 w-2 rounded-full bg-indigo-500" />
+                <h2 className="font-display text-xl sm:text-2xl font-black text-white tracking-tight">
+                  Start a Project
+                </h2>
               </div>
-              <h2 className="mt-2 font-display text-2xl sm:text-3xl font-black text-neutral-950">
-                작업 문의 및 견적 상담
-              </h2>
-              <p className="mt-2 text-xs sm:text-sm text-neutral-500">
-                준비 중이신 영상 편집이나 상세페이지 디자인에 대해 편하게 남겨주세요.
+              <p className="mt-1 text-xs sm:text-sm text-neutral-400">
+                준비 중이신 프로젝트에 대해 편하게 남겨주세요. 꼼꼼히 확인 후 회신드립니다.
               </p>
+            </div>
 
-              {/* Direct email pill */}
-              <div className="mt-4 flex items-center justify-between rounded-xl bg-neutral-50 p-3 border border-neutral-200/80">
-                <div className="text-xs text-neutral-600">
-                  직접 이메일 문의:{' '}
-                  <a href={`mailto:${email}`} className="font-bold text-neutral-900 hover:underline">
-                    {email}
-                  </a>
-                </div>
-                <button
-                  onClick={handleCopyEmail}
-                  className="flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-700 bg-white px-3 py-1 rounded-lg border border-neutral-200 shadow-2xs cursor-pointer"
-                >
-                  {copied ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
-                  {copied ? '복사완료' : '이메일 복사'}
-                </button>
-              </div>
+            <button
+              onClick={onClose}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white transition cursor-pointer shrink-0 ml-4"
+              aria-label="닫기"
+            >
+              <X size={18} />
+            </button>
+          </div>
 
-              {/* Form */}
-              <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                      성함 또는 브랜드/채널명 *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="예: 홍길동 / 브랜드명"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 text-sm focus:border-blue-600 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                      회신받으실 이메일 주소 *
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="예: example@naver.com"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 text-sm focus:border-blue-600 focus:outline-none"
-                    />
-                  </div>
+          {/* Body Content */}
+          <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-6 space-y-7 custom-scrollbar bg-neutral-900">
+            {isSubmitted ? (
+              /* Success / Completed View */
+              <div className="py-8 sm:py-12 text-center max-w-xl mx-auto space-y-6">
+                <div className="mx-auto flex h-18 w-18 items-center justify-center rounded-3xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shadow-lg">
+                  <Check size={36} />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                      작업 유형
-                    </label>
-                    <select
-                      value={formData.projectType}
-                      onChange={(e) => setFormData({ ...formData, projectType: e.target.value })}
-                      className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-xs font-medium focus:border-blue-600 focus:outline-none"
-                    >
-                      <option>유튜브 롱폼 영상 편집</option>
-                      <option>이커머스 상세페이지 제작</option>
-                      <option>유튜브 숏폼 / 릴스 편집</option>
-                      <option>정기 협업 및 다건 의뢰</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                      희망 예산 (KRW)
-                    </label>
-                    <select
-                      value={formData.budget}
-                      onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
-                      className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-xs font-medium focus:border-blue-600 focus:outline-none"
-                    >
-                      <option>10만 원 ~ 30만 원 미만</option>
-                      <option>30만 원 ~ 50만 원</option>
-                      <option>50만 원 ~ 100만 원</option>
-                      <option>100만 원 ~ 200만 원</option>
-                      <option>200만 원 이상 / 정기 협업</option>
-                      <option>상담 후 협의</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                      희망 일정
-                    </label>
-                    <select
-                      value={formData.timeline}
-                      onChange={(e) => setFormData({ ...formData, timeline: e.target.value })}
-                      className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-xs font-medium focus:border-blue-600 focus:outline-none"
-                    >
-                      <option>급행 (3일 이내)</option>
-                      <option>1주일 이내</option>
-                      <option>2~3주 이내</option>
-                      <option>일정 조율 가능</option>
-                    </select>
-                  </div>
+                <div className="space-y-2">
+                  <h3 className="font-display text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                    프로젝트 문의 작성이 완료되었습니다
+                  </h3>
+                  <p className="text-sm text-neutral-400 leading-relaxed break-keep">
+                    기본 메일 앱이 실행되었습니다. 메일 앱이 자동으로 열리지 않더라도
+                    <strong className="text-neutral-200"> 내용이 클립보드에 이미 복사</strong>되어
+                    있으므로, 웹메일(네이버, Gmail 등) 본문에 바로 붙여넣어 전송하실 수 있습니다.
+                  </p>
                 </div>
 
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                    프로젝트 내용 및 요청사항
-                  </label>
-                  <textarea
-                    rows={3}
-                    placeholder="작업 분량, 참고할 레퍼런스 영상/링크, 전달해주실 소스 내용 등을 간단히 적어주세요."
-                    value={formData.message}
-                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 text-sm focus:border-blue-600 focus:outline-none resize-none"
-                  />
+                {/* Direct Mail Info Box */}
+                <div className="rounded-2xl border border-neutral-800 bg-neutral-950/70 p-4 text-left space-y-3">
+                  <div className="flex items-center justify-between text-xs text-neutral-400">
+                    <span className="font-medium">수신 이메일 주소:</span>
+                    <strong className="text-white font-mono">{targetEmail}</strong>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                    <button
+                      onClick={handleCopySummary}
+                      className="w-full sm:flex-1 flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-bold text-xs transition cursor-pointer border border-neutral-700"
+                    >
+                      {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                      {copied ? '문의 전문 복사완료' : '문의 전문 다시 복사'}
+                    </button>
+
+                    <a
+                      href={`mailto:${targetEmail}?subject=${encodeURIComponent(
+                        `[프로젝트 문의] ${formData.companyOrChannel}`
+                      )}&body=${encodeURIComponent(formattedSummary)}`}
+                      className="w-full sm:flex-1 flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition cursor-pointer shadow-md"
+                    >
+                      <ExternalLink size={14} />
+                      메일 앱 다시 열기
+                    </a>
+                  </div>
                 </div>
 
                 <div className="pt-2">
                   <button
+                    onClick={handleReset}
+                    className="inline-flex items-center gap-2 rounded-full bg-neutral-800 hover:bg-neutral-700 px-8 py-3 text-xs font-bold text-neutral-200 uppercase tracking-wider transition cursor-pointer border border-neutral-700"
+                  >
+                    <RotateCcw size={14} />
+                    확인 및 닫기
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Form */
+              <form onSubmit={handleSubmit} className="space-y-7">
+                {/* [섹션 1] 기본 정보 (항상 노출 / 고정) */}
+                <div className="rounded-2xl border border-neutral-800/90 bg-neutral-950/40 p-4 sm:p-5.5 space-y-4">
+                  <div className="flex items-center gap-2 text-xs font-mono font-bold tracking-wider text-indigo-400 uppercase">
+                    <span>01</span>
+                    <span className="text-neutral-600">·</span>
+                    <span className="text-neutral-200 font-semibold tracking-normal text-sm">
+                      기본 정보
+                    </span>
+                    <span className="text-rose-400 text-xs font-normal ml-auto">* 필수 입력 항목</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    {/* 업체/채널명 */}
+                    <div id="field-companyOrChannel">
+                      <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
+                        업체/채널명 <span className="text-rose-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.companyOrChannel}
+                        onChange={(e) => {
+                          setFormData({ ...formData, companyOrChannel: e.target.value });
+                          if (errors.companyOrChannel) {
+                            setErrors({ ...errors, companyOrChannel: '' });
+                          }
+                        }}
+                        placeholder="예: 러비 스튜디오 / 크리에이터 채널명"
+                        className={`w-full rounded-xl border bg-neutral-900/90 px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition ${
+                          errors.companyOrChannel
+                            ? 'border-rose-500 focus:border-rose-500'
+                            : 'border-neutral-700/80 focus:border-indigo-500'
+                        }`}
+                      />
+                      {errors.companyOrChannel && (
+                        <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1">
+                          <AlertCircle size={11} /> {errors.companyOrChannel}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 담당자 성함 / 직함 */}
+                    <div id="field-managerNameAndTitle">
+                      <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
+                        담당자 성함 / 직함 <span className="text-rose-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.managerNameAndTitle}
+                        onChange={(e) => {
+                          setFormData({ ...formData, managerNameAndTitle: e.target.value });
+                          if (errors.managerNameAndTitle) {
+                            setErrors({ ...errors, managerNameAndTitle: '' });
+                          }
+                        }}
+                        placeholder="예: 홍길동 팀장 / 담당자"
+                        className={`w-full rounded-xl border bg-neutral-900/90 px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition ${
+                          errors.managerNameAndTitle
+                            ? 'border-rose-500 focus:border-rose-500'
+                            : 'border-neutral-700/80 focus:border-indigo-500'
+                        }`}
+                      />
+                      {errors.managerNameAndTitle && (
+                        <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1">
+                          <AlertCircle size={11} /> {errors.managerNameAndTitle}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 연락처 (유선 / 메일) */}
+                    <div id="field-contact">
+                      <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
+                        연락처 (유선 / 메일) <span className="text-rose-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.contact}
+                        onChange={(e) => {
+                          setFormData({ ...formData, contact: e.target.value });
+                          if (errors.contact) {
+                            setErrors({ ...errors, contact: '' });
+                          }
+                        }}
+                        placeholder="예: 010-1234-5678 또는 contact@example.com"
+                        className={`w-full rounded-xl border bg-neutral-900/90 px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition ${
+                          errors.contact
+                            ? 'border-rose-500 focus:border-rose-500'
+                            : 'border-neutral-700/80 focus:border-indigo-500'
+                        }`}
+                      />
+                      {errors.contact && (
+                        <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1">
+                          <AlertCircle size={11} /> {errors.contact}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 브랜드 및 채널 링크 */}
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
+                        브랜드 및 채널 링크 <span className="text-neutral-500 font-normal">(선택)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.brandUrl}
+                        onChange={(e) => setFormData({ ...formData, brandUrl: e.target.value })}
+                        placeholder="웹사이트, SNS, 유튜브 채널 URL"
+                        className="w-full rounded-xl border border-neutral-700/80 bg-neutral-900/90 px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:outline-none transition"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* [섹션 2] 의뢰 프로젝트 유형 (항상 노출 / 트리거 선택자) */}
+                <div className="rounded-2xl border border-neutral-800/90 bg-neutral-950/40 p-4 sm:p-5.5 space-y-3.5">
+                  <div className="flex items-center gap-2 text-xs font-mono font-bold tracking-wider text-indigo-400 uppercase">
+                    <span>02</span>
+                    <span className="text-neutral-600">·</span>
+                    <span className="text-neutral-200 font-semibold tracking-normal text-sm">
+                      의뢰 프로젝트 유형
+                    </span>
+                    <span className="text-neutral-400 text-xs font-normal ml-auto">
+                      선택하신 유형에 따라 세부 항목이 전환됩니다
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {projectTypeOptions.map((opt) => {
+                      const isSelected = formData.projectType === opt.type;
+                      return (
+                        <button
+                          key={opt.type}
+                          type="button"
+                          onClick={() => {
+                            setFormData((prev) => ({ ...prev, projectType: opt.type }));
+                            // Clear conditional errors
+                            setErrors((prev) => {
+                              const updated = { ...prev };
+                              delete updated.videoRawFootage;
+                              delete updated.videoTargetLength;
+                              delete updated.ecommerceUsp;
+                              delete updated.otherDetails;
+                              return updated;
+                            });
+                          }}
+                          className={`flex items-start gap-3 p-3.5 rounded-xl border text-left transition cursor-pointer ${
+                            isSelected
+                              ? 'border-indigo-500/90 bg-indigo-500/10 text-white shadow-xs ring-1 ring-indigo-500/40'
+                              : 'border-neutral-800 bg-neutral-900/50 text-neutral-300 hover:border-neutral-700 hover:bg-neutral-800/50'
+                          }`}
+                        >
+                          <div
+                            className={`p-2 rounded-lg shrink-0 mt-0.5 ${
+                              isSelected
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-neutral-800 text-neutral-400'
+                            }`}
+                          >
+                            {opt.icon}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs sm:text-sm font-bold truncate">
+                                {opt.label}
+                              </span>
+                              <span
+                                className={`h-4 w-4 rounded-full border flex items-center justify-center shrink-0 ml-1.5 ${
+                                  isSelected
+                                    ? 'border-indigo-500 bg-indigo-600 text-white'
+                                    : 'border-neutral-600 bg-transparent'
+                                }`}
+                              >
+                                {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                              </span>
+                            </div>
+                            <p className="mt-0.5 text-[11px] text-neutral-400 leading-snug">
+                              {opt.sublabel}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* [섹션 3] 작업 세부 사항 (조건부 노출: 섹션 2 선택값에 따라 전환) */}
+                <div className="rounded-2xl border border-neutral-800/90 bg-neutral-950/40 p-4 sm:p-5.5 space-y-4">
+                  <div className="flex items-center gap-2 text-xs font-mono font-bold tracking-wider text-indigo-400 uppercase">
+                    <span>03</span>
+                    <span className="text-neutral-600">·</span>
+                    <span className="text-neutral-200 font-semibold tracking-normal text-sm">
+                      작업 세부 사항
+                    </span>
+                    <span className="text-xs font-medium text-indigo-300 ml-auto">
+                      {formData.projectType === 'youtube_long' && '유튜브 롱폼 편집 제원'}
+                      {formData.projectType === 'shortform' && '숏폼 영상 편집 제원'}
+                      {formData.projectType === 'ecommerce_detail' && '상세페이지 기획/디자인 제원'}
+                      {formData.projectType === 'other' && '기타 문의 세부 내용'}
+                    </span>
+                  </div>
+
+                  {/* CASE 1: (A) 유튜브 롱폼 또는 (B) 숏폼 */}
+                  {(formData.projectType === 'youtube_long' ||
+                    formData.projectType === 'shortform') && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        {/* 원본 촬영본 분량 */}
+                        <div id="field-videoRawFootage">
+                          <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
+                            원본 촬영본 분량 (총 러닝타임 / 용량) <span className="text-rose-400">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.videoRawFootage}
+                            onChange={(e) => {
+                              setFormData({ ...formData, videoRawFootage: e.target.value });
+                              if (errors.videoRawFootage) {
+                                setErrors({ ...errors, videoRawFootage: '' });
+                              }
+                            }}
+                            placeholder="예: 4K 촬영본 1시간 분량 / 약 40GB"
+                            className={`w-full rounded-xl border bg-neutral-900/90 px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition ${
+                              errors.videoRawFootage
+                                ? 'border-rose-500 focus:border-rose-500'
+                                : 'border-neutral-700/80 focus:border-indigo-500'
+                            }`}
+                          />
+                          {errors.videoRawFootage && (
+                            <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1">
+                              <AlertCircle size={11} /> {errors.videoRawFootage}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* 최종 납품 희망 영상 길이 */}
+                        <div id="field-videoTargetLength">
+                          <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
+                            최종 납품 희망 영상 길이 <span className="text-rose-400">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.videoTargetLength}
+                            onChange={(e) => {
+                              setFormData({ ...formData, videoTargetLength: e.target.value });
+                              if (errors.videoTargetLength) {
+                                setErrors({ ...errors, videoTargetLength: '' });
+                              }
+                            }}
+                            placeholder={
+                              formData.projectType === 'shortform'
+                                ? '예: 30초 ~ 50초 내외'
+                                : '예: 10분 ~ 15분 내외'
+                            }
+                            className={`w-full rounded-xl border bg-neutral-900/90 px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition ${
+                              errors.videoTargetLength
+                                ? 'border-rose-500 focus:border-rose-500'
+                                : 'border-neutral-700/80 focus:border-indigo-500'
+                            }`}
+                          />
+                          {errors.videoTargetLength && (
+                            <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1">
+                              <AlertCircle size={11} /> {errors.videoTargetLength}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 작업 범위 (체크박스 다중선택) */}
+                      <div>
+                        <label className="block text-xs font-semibold text-neutral-300 mb-2">
+                          작업 범위 <span className="text-neutral-500 font-normal">(중복 선택 가능)</span>
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {videoScopeOptions.map((item) => {
+                            const isChecked = formData.videoScope.includes(item);
+                            return (
+                              <button
+                                key={item}
+                                type="button"
+                                onClick={() => handleScopeToggle(item)}
+                                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium border transition cursor-pointer ${
+                                  isChecked
+                                    ? 'border-indigo-500 bg-indigo-500/20 text-indigo-300'
+                                    : 'border-neutral-800 bg-neutral-900/60 text-neutral-400 hover:border-neutral-700'
+                                }`}
+                              >
+                                <span
+                                  className={`h-3.5 w-3.5 rounded flex items-center justify-center text-[10px] ${
+                                    isChecked ? 'bg-indigo-600 text-white' : 'border border-neutral-600'
+                                  }`}
+                                >
+                                  {isChecked && <Check size={10} />}
+                                </span>
+                                <span>{item}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* 업로드 주기 또는 의뢰 건수 */}
+                      <div>
+                        <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
+                          업로드 주기 또는 의뢰 건수{' '}
+                          <span className="text-neutral-500 font-normal">(선택)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.videoFrequency}
+                          onChange={(e) => setFormData({ ...formData, videoFrequency: e.target.value })}
+                          placeholder="예: 주 1회 단건 / 월 정기 계약 4편 / 프로젝트성 2편 등"
+                          className="w-full rounded-xl border border-neutral-700/80 bg-neutral-900/90 px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:outline-none transition"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CASE 2: (C) E-커머스 상세페이지 기획 & 디자인 */}
+                  {formData.projectType === 'ecommerce_detail' && (
+                    <div className="space-y-4">
+                      {/* 제품군 및 주요 셀링 포인트(USP) */}
+                      <div id="field-ecommerceUsp">
+                        <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
+                          제품군 및 주요 셀링 포인트(USP) <span className="text-rose-400">*</span>
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={formData.ecommerceUsp}
+                          onChange={(e) => {
+                            setFormData({ ...formData, ecommerceUsp: e.target.value });
+                            if (errors.ecommerceUsp) {
+                              setErrors({ ...errors, ecommerceUsp: '' });
+                            }
+                          }}
+                          placeholder="예: 기능성 뷰티 앰플 / 흡수력 3배 개선 임상 데이터, 피부 저자극 특허 인증 강조 필요"
+                          className={`w-full rounded-xl border bg-neutral-900/90 px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition resize-none ${
+                            errors.ecommerceUsp
+                              ? 'border-rose-500 focus:border-rose-500'
+                              : 'border-neutral-700/80 focus:border-indigo-500'
+                          }`}
+                        />
+                        {errors.ecommerceUsp && (
+                          <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1">
+                            <AlertCircle size={11} /> {errors.ecommerceUsp}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* 제공 가능 리소스 (체크박스) */}
+                      <div>
+                        <label className="block text-xs font-semibold text-neutral-300 mb-2">
+                          제공 가능 리소스 <span className="text-neutral-500 font-normal">(중복 선택 가능)</span>
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {ecommerceResourceOptions.map((item) => {
+                            const isChecked = formData.ecommerceResources.includes(item);
+                            return (
+                              <button
+                                key={item}
+                                type="button"
+                                onClick={() => handleResourceToggle(item)}
+                                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium border transition cursor-pointer ${
+                                  isChecked
+                                    ? 'border-indigo-500 bg-indigo-500/20 text-indigo-300'
+                                    : 'border-neutral-800 bg-neutral-900/60 text-neutral-400 hover:border-neutral-700'
+                                }`}
+                              >
+                                <span
+                                  className={`h-3.5 w-3.5 rounded flex items-center justify-center text-[10px] ${
+                                    isChecked ? 'bg-indigo-600 text-white' : 'border border-neutral-600'
+                                  }`}
+                                >
+                                  {isChecked && <Check size={10} />}
+                                </span>
+                                <span>{item}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* 예상 작업 분량 */}
+                      <div>
+                        <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
+                          예상 작업 분량 <span className="text-neutral-500 font-normal">(선택)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.ecommerceWorkload}
+                          onChange={(e) => setFormData({ ...formData, ecommerceWorkload: e.target.value })}
+                          placeholder="모바일 기준 가로 860px / 세로 예상 길이 또는 8~12개 섹션 내외"
+                          className="w-full rounded-xl border border-neutral-700/80 bg-neutral-900/90 px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:outline-none transition"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CASE 3: (D) 기타 */}
+                  {formData.projectType === 'other' && (
+                    <div id="field-otherDetails">
+                      <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
+                        문의 세부 내용 직접 입력 <span className="text-rose-400">*</span>
+                      </label>
+                      <textarea
+                        rows={4}
+                        value={formData.otherDetails}
+                        onChange={(e) => {
+                          setFormData({ ...formData, otherDetails: e.target.value });
+                          if (errors.otherDetails) {
+                            setErrors({ ...errors, otherDetails: '' });
+                          }
+                        }}
+                        placeholder="기획 의도, 프로젝트 목표, 필요하신 협업 범위(브랜딩/모션/종합 콘텐츠 등)를 구체적으로 남겨주세요."
+                        className={`w-full rounded-xl border bg-neutral-900/90 px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition resize-none ${
+                          errors.otherDetails
+                            ? 'border-rose-500 focus:border-rose-500'
+                            : 'border-neutral-700/80 focus:border-indigo-500'
+                        }`}
+                      />
+                      {errors.otherDetails && (
+                        <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1">
+                          <AlertCircle size={11} /> {errors.otherDetails}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* [섹션 4] 레퍼런스 및 스타일 가이드 (항상 노출) */}
+                <div className="rounded-2xl border border-neutral-800/90 bg-neutral-950/40 p-4 sm:p-5.5 space-y-4">
+                  <div className="flex items-center gap-2 text-xs font-mono font-bold tracking-wider text-indigo-400 uppercase">
+                    <span>04</span>
+                    <span className="text-neutral-600">·</span>
+                    <span className="text-neutral-200 font-semibold tracking-normal text-sm">
+                      레퍼런스 및 스타일 가이드
+                    </span>
+                  </div>
+
+                  <div className="space-y-3.5">
+                    {/* 지향하는 무드 / 톤앤매너 */}
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
+                        지향하는 무드 / 톤앤매너 <span className="text-neutral-500 font-normal">(선택)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.targetMood}
+                        onChange={(e) => setFormData({ ...formData, targetMood: e.target.value })}
+                        placeholder="예: 애플 스타일의 미니멀함 / 빠른 템포의 하이텐션 예능감 / 신뢰감 있는 테크 리뷰 톤"
+                        className="w-full rounded-xl border border-neutral-700/80 bg-neutral-900/90 px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:outline-none transition"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      {/* 참고 레퍼런스 링크 1 (필수) */}
+                      <div id="field-referenceLink1">
+                        <label className="block text-xs font-semibold text-neutral-300 mb-1.5 flex items-center gap-1">
+                          <LinkIcon size={12} className="text-indigo-400" />
+                          <span>참고 레퍼런스 링크 1</span> <span className="text-rose-400">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.referenceLink1}
+                          onChange={(e) => {
+                            setFormData({ ...formData, referenceLink1: e.target.value });
+                            if (errors.referenceLink1) {
+                              setErrors({ ...errors, referenceLink1: '' });
+                            }
+                          }}
+                          placeholder="유튜브 영상 링크 또는 웹페이지 URL"
+                          className={`w-full rounded-xl border bg-neutral-900/90 px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition ${
+                            errors.referenceLink1
+                              ? 'border-rose-500 focus:border-rose-500'
+                              : 'border-neutral-700/80 focus:border-indigo-500'
+                          }`}
+                        />
+                        {errors.referenceLink1 && (
+                          <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1">
+                            <AlertCircle size={11} /> {errors.referenceLink1}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* 참고 레퍼런스 링크 2 (선택) */}
+                      <div>
+                        <label className="block text-xs font-semibold text-neutral-300 mb-1.5 flex items-center gap-1">
+                          <LinkIcon size={12} className="text-neutral-500" />
+                          <span>참고 레퍼런스 링크 2</span> <span className="text-neutral-500 font-normal">(선택)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.referenceLink2}
+                          onChange={(e) => setFormData({ ...formData, referenceLink2: e.target.value })}
+                          placeholder="추가 레퍼런스 URL (선택 사항)"
+                          className="w-full rounded-xl border border-neutral-700/80 bg-neutral-900/90 px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:outline-none transition"
+                        />
+                      </div>
+                    </div>
+
+                    {/* 지양하는 스타일이나 필수 주의사항 */}
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
+                        지양하는 스타일이나 필수 주의사항{' '}
+                        <span className="text-neutral-500 font-normal">(선택)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.avoidStyles}
+                        onChange={(e) => setFormData({ ...formData, avoidStyles: e.target.value })}
+                        placeholder="예: 과도한 폰트 효과 지양 / 특정 색상 사용 금지 / 잔잔한 배경음악 위주 지양"
+                        className="w-full rounded-xl border border-neutral-700/80 bg-neutral-900/90 px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:outline-none transition"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* [섹션 5] 일정 및 예산 (항상 노출) */}
+                <div className="rounded-2xl border border-neutral-800/90 bg-neutral-950/40 p-4 sm:p-5.5 space-y-4">
+                  <div className="flex items-center gap-2 text-xs font-mono font-bold tracking-wider text-indigo-400 uppercase">
+                    <span>05</span>
+                    <span className="text-neutral-600">·</span>
+                    <span className="text-neutral-200 font-semibold tracking-normal text-sm">
+                      일정 및 예산
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                    {/* 원본(자료) 전달 가능 일자 */}
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-300 mb-1.5 flex items-center gap-1">
+                        <Calendar size={12} className="text-neutral-500" />
+                        <span>원본 전달 가능일</span> <span className="text-neutral-500 font-normal">(선택)</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.rawMaterialDate}
+                        onChange={(e) => setFormData({ ...formData, rawMaterialDate: e.target.value })}
+                        className="w-full rounded-xl border border-neutral-700/80 bg-neutral-900/90 px-3 py-2 text-xs text-neutral-100 focus:border-indigo-500 focus:outline-none transition"
+                      />
+                    </div>
+
+                    {/* 1차 시안 희망 수령일 */}
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-300 mb-1.5 flex items-center gap-1">
+                        <Calendar size={12} className="text-neutral-500" />
+                        <span>1차 시안 희망일</span> <span className="text-neutral-500 font-normal">(선택)</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.firstDraftDate}
+                        onChange={(e) => setFormData({ ...formData, firstDraftDate: e.target.value })}
+                        className="w-full rounded-xl border border-neutral-700/80 bg-neutral-900/90 px-3 py-2 text-xs text-neutral-100 focus:border-indigo-500 focus:outline-none transition"
+                      />
+                    </div>
+
+                    {/* 최종 완료 및 납품 희망일 (필수) */}
+                    <div id="field-finalDeliveryDate">
+                      <label className="block text-xs font-semibold text-neutral-300 mb-1.5 flex items-center gap-1">
+                        <Calendar size={12} className="text-indigo-400" />
+                        <span>최종 납품 희망일</span> <span className="text-rose-400">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.finalDeliveryDate}
+                        onChange={(e) => {
+                          setFormData({ ...formData, finalDeliveryDate: e.target.value });
+                          if (errors.finalDeliveryDate) {
+                            setErrors({ ...errors, finalDeliveryDate: '' });
+                          }
+                        }}
+                        className={`w-full rounded-xl border bg-neutral-900/90 px-3 py-2 text-xs text-neutral-100 focus:outline-none transition ${
+                          errors.finalDeliveryDate
+                            ? 'border-rose-500 focus:border-rose-500'
+                            : 'border-neutral-700/80 focus:border-indigo-500'
+                        }`}
+                      />
+                      {errors.finalDeliveryDate && (
+                        <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1">
+                          <AlertCircle size={11} /> {errors.finalDeliveryDate}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 책정 예산 범위 (필수) */}
+                  <div id="field-budgetRange">
+                    <label className="block text-xs font-semibold text-neutral-300 mb-1.5 flex items-center gap-1">
+                      <DollarSign size={12} className="text-indigo-400" />
+                      <span>책정 예산 범위</span> <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.budgetRange}
+                      onChange={(e) => {
+                        setFormData({ ...formData, budgetRange: e.target.value });
+                        if (errors.budgetRange) {
+                          setErrors({ ...errors, budgetRange: '' });
+                        }
+                      }}
+                      placeholder="예: 건당 50~80만 원 선 (VAT 별도) / 월 정기 계약 200만 원 선"
+                      className={`w-full rounded-xl border bg-neutral-900/90 px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition ${
+                        errors.budgetRange
+                          ? 'border-rose-500 focus:border-rose-500'
+                          : 'border-neutral-700/80 focus:border-indigo-500'
+                      }`}
+                    />
+                    {errors.budgetRange && (
+                      <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1">
+                        <AlertCircle size={11} /> {errors.budgetRange}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* [섹션 6] 기타 요청 및 전달사항 (항상 노출) */}
+                <div className="rounded-2xl border border-neutral-800/90 bg-neutral-950/40 p-4 sm:p-5.5 space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-mono font-bold tracking-wider text-indigo-400 uppercase">
+                    <span>06</span>
+                    <span className="text-neutral-600">·</span>
+                    <span className="text-neutral-200 font-semibold tracking-normal text-sm">
+                      기타 요청 및 전달사항
+                    </span>
+                    <span className="text-neutral-500 text-xs font-normal ml-auto">(선택)</span>
+                  </div>
+
+                  <textarea
+                    rows={3}
+                    value={formData.additionalNotes}
+                    onChange={(e) => setFormData({ ...formData, additionalNotes: e.target.value })}
+                    placeholder="작업 시 특별히 강조하고 싶은 점이나 협의가 필요한 사항을 자유롭게 적어주세요."
+                    className="w-full rounded-xl border border-neutral-700/80 bg-neutral-900/90 px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:outline-none transition resize-none"
+                  />
+                </div>
+
+                {/* 전송 바 */}
+                <div className="pt-2 sticky bottom-0 bg-neutral-900/90 pb-2 backdrop-blur-md">
+                  <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full flex items-center justify-center gap-2 rounded-full bg-blue-600 py-3.5 text-xs font-bold text-white uppercase tracking-wider shadow-md hover:bg-blue-700 transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                    className="w-full flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 py-4 text-sm font-bold text-white shadow-lg shadow-indigo-600/25 active:scale-98 transition disabled:opacity-50 cursor-pointer"
                   >
                     {isSubmitting ? (
-                      <span>문의 전송 중...</span>
+                      <span>문의 작성 취합 중...</span>
                     ) : (
                       <>
-                        <span>문의 및 견적 신청하기</span>
-                        <Send size={14} />
+                        <Sparkles size={16} />
+                        <span>프로젝트 문의 보내기</span>
+                        <Send size={15} className="ml-0.5" />
                       </>
                     )}
                   </button>
+                  <p className="mt-2 text-center text-[11px] text-neutral-500">
+                    전송 버튼 클릭 시 문의 내용이 클립보드에 자동 복사되고 {targetEmail} 수신 메일 창이 호출됩니다.
+                  </p>
                 </div>
               </form>
-            </div>
-          )}
+            )}
+          </div>
         </motion.div>
       </div>
     </AnimatePresence>

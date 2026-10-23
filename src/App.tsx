@@ -14,6 +14,7 @@ import { ContactSection } from "./components/ContactSection";
 import { AdminEditView } from "./components/AdminEditView";
 import { ProjectModal } from "./components/ProjectModal";
 import { AIConsultantModal } from "./components/AIConsultantModal";
+import { ContactModal } from "./components/ContactModal";
 import { Toast } from "./components/Toast";
 import { isSupabaseConfigured, requireSupabase } from "./lib/supabase";
 import {
@@ -47,6 +48,7 @@ export default function App() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [startModalWithVideo, setStartModalWithVideo] = useState(false);
   const [isAIConsultantOpen, setIsAIConsultantOpen] = useState(false);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [testScenario, setTestScenario] = useState<WorksTestScenario>("all");
   const [isHeroOpenForProjects, setIsHeroOpenForProjects] = useState(true);
@@ -333,7 +335,8 @@ export default function App() {
       <Header
         activeTab={activeTab}
         onSelectTab={handleSelectTab}
-        onOpenContactModal={() => setIsAIConsultantOpen(true)}
+        onOpenContactModal={() => setIsContactModalOpen(true)}
+        onOpenAIConsultant={() => setIsAIConsultantOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -343,7 +346,7 @@ export default function App() {
             {/* Hero Section matching Screenshot 1 */}
             <HeroSection
               onExploreWorks={() => handleSelectTab("works")}
-              onGetInTouch={() => setIsAIConsultantOpen(true)}
+              onGetInTouch={() => setIsContactModalOpen(true)}
               isOpenForProjects={isHeroOpenForProjects}
               canToggleStatus={isAuthenticated}
               isStatusSaving={isHeroStatusLoading || isHeroStatusSaving}
@@ -360,7 +363,7 @@ export default function App() {
 
             {/* Contact / Let's create something amazing. section matching Screenshot 1 */}
             <ContactSection
-              onOpenContactModal={() => setIsAIConsultantOpen(true)}
+              onOpenContactModal={() => setIsContactModalOpen(true)}
               onShowToast={handleShowToast}
             />
           </div>
@@ -371,13 +374,13 @@ export default function App() {
             projects={currentProjects}
             onSelectProject={(project) => handleOpenProject(project, false)}
             onPlayVideo={(project) => handleOpenProject(project, true)}
-            onOpenContactModal={() => setIsAIConsultantOpen(true)}
+            onOpenContactModal={() => setIsContactModalOpen(true)}
           />
         )}
 
         {activeTab === "about" && (
           <AboutView
-            onOpenContactModal={() => setIsAIConsultantOpen(true)}
+            onOpenContactModal={() => setIsContactModalOpen(true)}
             onExploreWorks={() => handleSelectTab("works")}
           />
         )}
@@ -385,7 +388,7 @@ export default function App() {
         {activeTab === "contact" && (
           <div className="pt-8">
             <ContactSection
-              onOpenContactModal={() => setIsAIConsultantOpen(true)}
+              onOpenContactModal={() => setIsContactModalOpen(true)}
               onShowToast={handleShowToast}
             />
           </div>
@@ -500,6 +503,13 @@ export default function App() {
         startWithVideo={startModalWithVideo}
       />
 
+      {/* Start a Project (Custom Inquiry Form) Modal */}
+      <ContactModal
+        isOpen={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
+        onShowToast={handleShowToast}
+      />
+
       {/* 1:1 AI Consultation & Project Inquiry Assistant Modal */}
       <AIConsultantModal
         isOpen={isAIConsultantOpen}
@@ -509,6 +519,10 @@ export default function App() {
         onOpenProject={(project) => {
           setIsAIConsultantOpen(false);
           handleOpenProject(project);
+        }}
+        onOpenStartProject={() => {
+          setIsAIConsultantOpen(false);
+          setIsContactModalOpen(true);
         }}
       />
 
