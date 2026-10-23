@@ -9,12 +9,14 @@ interface HeaderProps {
   activeTab: NavTab;
   onSelectTab: (tab: NavTab) => void;
   onOpenContactModal: () => void;
+  onOpenAIConsultant?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   activeTab,
   onSelectTab,
   onOpenContactModal,
+  onOpenAIConsultant,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { t } = useLanguage();
@@ -108,13 +110,24 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </nav>
 
-        {/* Right Action Area: Language Selector + LET'S TALK */}
-        <div className="hidden md:flex items-center gap-3">
+        {/* Right Action Area: Language Selector + AI Consult + LET'S TALK */}
+        <div className="hidden md:flex items-center gap-2.5">
           <LanguageSelector variant="header" />
+          {onOpenAIConsultant && (
+            <button
+              id="header-ai-consult-btn"
+              onClick={onOpenAIConsultant}
+              className="inline-flex items-center gap-1.5 justify-center rounded-full border border-neutral-300/80 bg-white/90 px-3.5 py-2 text-xs font-semibold tracking-wider text-neutral-700 hover:text-blue-600 hover:border-blue-300 transition-all cursor-pointer shadow-2xs"
+              title="1:1 AI 컨설팅 어시스턴트"
+            >
+              <Sparkles size={12} className="text-blue-600" />
+              <span>AI 상담</span>
+            </button>
+          )}
           <button
             id="header-lets-talk-btn"
             onClick={onOpenContactModal}
-            className="inline-flex items-center gap-1.5 justify-center rounded-full bg-blue-600 px-5 py-2.5 text-xs font-bold tracking-wider text-white uppercase shadow-sm transition-all duration-200 hover:bg-blue-700 hover:shadow active:scale-95 cursor-pointer"
+            className="inline-flex items-center gap-1.5 justify-center rounded-full bg-blue-600 px-5 py-2 text-xs font-bold tracking-wider text-white uppercase shadow-sm transition-all duration-200 hover:bg-blue-700 hover:shadow active:scale-95 cursor-pointer"
           >
             <Sparkles size={13} className="text-blue-200" />
             <span>{t.nav.letsTalk}</span>
@@ -122,15 +135,24 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Mobile menu toggle */}
-        <div className="flex md:hidden items-center space-x-2">
+        <div className="flex md:hidden items-center space-x-1.5">
           <LanguageSelector variant="header" />
+          {onOpenAIConsultant && (
+            <button
+              id="mobile-ai-consult-btn"
+              onClick={onOpenAIConsultant}
+              className="flex items-center gap-1 rounded-full border border-neutral-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-neutral-800"
+            >
+              <Sparkles size={12} className="text-blue-600" />
+              <span>AI</span>
+            </button>
+          )}
           <button
             id="mobile-lets-talk-btn"
             onClick={onOpenContactModal}
             className="flex items-center gap-1 rounded-full bg-blue-600 px-3 py-1.5 text-xs font-bold tracking-wider text-white uppercase"
           >
-            <Sparkles size={12} className="text-blue-200" />
-            <span>{t.nav.aiConsult}</span>
+            <span>{t.nav.letsTalk}</span>
           </button>
           <button
             id="mobile-menu-toggle-btn"

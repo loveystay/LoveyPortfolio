@@ -27,12 +27,14 @@ interface AIConsultantModalProps {
   isOpen: boolean;
   onClose: () => void;
   onShowToast: (msg: string) => void;
+  onOpenStartProject?: () => void;
 }
 
 export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
   isOpen,
   onClose,
   onShowToast,
+  onOpenStartProject,
 }) => {
   const { t, language } = useLanguage();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -284,6 +286,19 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
 
             <div className="flex items-center gap-2">
               <button
+                type="button"
+                onClick={() => {
+                  if (onOpenStartProject) {
+                    onOpenStartProject();
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shadow-xs cursor-pointer"
+                title="Start a Project"
+              >
+                <Sparkles size={12} className="text-indigo-200" />
+                <span>Start a Project</span>
+              </button>
+              <button
                 onClick={handleResetChat}
                 className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-400 hover:bg-neutral-200/70 hover:text-neutral-700 transition cursor-pointer"
                 title="Reset Chat"
@@ -478,6 +493,34 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
                 <Send size={16} />
               </button>
             </form>
+
+            {/* Direct Start a Project Action Banner */}
+            <div className="mt-3 flex items-center justify-between gap-3 p-3 rounded-2xl bg-neutral-900 border border-neutral-800 text-white shadow-md">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="h-8 w-8 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+                  <Sparkles size={15} />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-white truncate">프로젝트 직접 의뢰하기</div>
+                  <div className="text-[11px] text-neutral-400 truncate">
+                    맞춤 제원 폼을 통해 빠르고 정확한 견적을 확인하세요.
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (onOpenStartProject) {
+                    onOpenStartProject();
+                  }
+                }}
+                className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shadow-sm cursor-pointer active:scale-95"
+              >
+                <span>Start a Project</span>
+                <ChevronRight size={13} />
+              </button>
+            </div>
 
             {/* Bottom Contact Pill */}
             <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-0 pt-2 border-t border-neutral-100 text-[11px] text-neutral-500">
