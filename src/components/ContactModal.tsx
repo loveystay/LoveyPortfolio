@@ -435,28 +435,32 @@ ${formData.additionalNotes || '없음'}
               </div>
             ) : (
               /* Clean Form */
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-5">
                 {/* [섹션 1] 기본 정보 */}
-                <section className="rounded-xl border border-neutral-800/80 bg-[#131317] p-5 sm:p-6 space-y-4 shadow-sm transition hover:border-neutral-700/60">
-                  <div className="flex items-center justify-between pb-3 border-b border-neutral-800/70">
+                <section className="rounded-2xl border border-neutral-800/90 bg-[#121217] p-5 sm:p-6 space-y-4 shadow-sm hover:border-neutral-700/80 transition-colors">
+                  <div className="flex items-center justify-between pb-3 border-b border-neutral-800/80">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-[11px] font-mono font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-indigo-500/10 border border-indigo-500/20 text-[11px] font-mono font-bold text-indigo-400">
                         01
                       </span>
                       <h3 className="text-sm sm:text-base font-semibold text-white tracking-tight">
                         기본 정보
                       </h3>
                     </div>
-                    <span className="text-[11px] text-neutral-500 font-medium">
-                      <span className="text-rose-400">*</span> 필수 항목
+                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-rose-300 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-full">
+                      <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
+                      필수 입력
                     </span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* 업체/채널명 */}
                     <div id="field-companyOrChannel" className="space-y-1.5">
-                      <label className="block text-xs font-medium text-neutral-300">
-                        업체 / 채널명 <span className="text-rose-400">*</span>
+                      <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                        <span className="flex items-center gap-1.5">
+                          업체 / 채널명
+                          <span className="text-rose-400 text-xs font-bold" title="필수">*</span>
+                        </span>
                       </label>
                       <input
                         type="text"
@@ -467,15 +471,15 @@ ${formData.additionalNotes || '없음'}
                             setErrors({ ...errors, companyOrChannel: '' });
                           }
                         }}
-                        placeholder="예: staylovey, 브랜드명 또는 채널명"
-                        className={`w-full rounded-lg border bg-[#0d0d10] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all ${
+                        placeholder="예: staylovey (또는 브랜드 / 채널명)"
+                        className={`w-full rounded-xl border bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all ${
                           errors.companyOrChannel
                             ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
                             : 'border-neutral-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20'
                         }`}
                       />
                       {errors.companyOrChannel && (
-                        <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1">
+                        <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1 font-medium">
                           <AlertCircle size={11} /> {errors.companyOrChannel}
                         </p>
                       )}
@@ -483,8 +487,11 @@ ${formData.additionalNotes || '없음'}
 
                     {/* 담당자 성함 / 직함 */}
                     <div id="field-managerNameAndTitle" className="space-y-1.5">
-                      <label className="block text-xs font-medium text-neutral-300">
-                        담당자 성함 / 직함 <span className="text-rose-400">*</span>
+                      <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                        <span className="flex items-center gap-1.5">
+                          담당자 성함 및 직함
+                          <span className="text-rose-400 text-xs font-bold" title="필수">*</span>
+                        </span>
                       </label>
                       <input
                         type="text"
@@ -495,15 +502,15 @@ ${formData.additionalNotes || '없음'}
                             setErrors({ ...errors, managerNameAndTitle: '' });
                           }
                         }}
-                        placeholder="예: 홍길동 팀장 / 총괄 디렉터"
-                        className={`w-full rounded-lg border bg-[#0d0d10] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all ${
+                        placeholder="예: 홍길동 팀장 / 마케팅 디렉터"
+                        className={`w-full rounded-xl border bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all ${
                           errors.managerNameAndTitle
                             ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
                             : 'border-neutral-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20'
                         }`}
                       />
                       {errors.managerNameAndTitle && (
-                        <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1">
+                        <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1 font-medium">
                           <AlertCircle size={11} /> {errors.managerNameAndTitle}
                         </p>
                       )}
@@ -511,8 +518,11 @@ ${formData.additionalNotes || '없음'}
 
                     {/* 연락처 */}
                     <div id="field-contact" className="space-y-1.5">
-                      <label className="block text-xs font-medium text-neutral-300">
-                        연락처 (유선 / 메일) <span className="text-rose-400">*</span>
+                      <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                        <span className="flex items-center gap-1.5">
+                          연락처 (유선 또는 이메일)
+                          <span className="text-rose-400 text-xs font-bold" title="필수">*</span>
+                        </span>
                       </label>
                       <input
                         type="text"
@@ -524,14 +534,14 @@ ${formData.additionalNotes || '없음'}
                           }
                         }}
                         placeholder="예: 010-1234-5678 또는 contact@domain.com"
-                        className={`w-full rounded-lg border bg-[#0d0d10] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all ${
+                        className={`w-full rounded-xl border bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all ${
                           errors.contact
                             ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
                             : 'border-neutral-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20'
                         }`}
                       />
                       {errors.contact && (
-                        <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1">
+                        <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1 font-medium">
                           <AlertCircle size={11} /> {errors.contact}
                         </p>
                       )}
@@ -539,28 +549,26 @@ ${formData.additionalNotes || '없음'}
 
                     {/* 브랜드 및 채널 링크 */}
                     <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-xs font-medium text-neutral-300">
-                          브랜드 및 채널 링크
-                        </label>
-                        <span className="text-[11px] text-neutral-500">선택</span>
-                      </div>
+                      <label className="flex items-center justify-between text-xs font-medium text-neutral-300">
+                        <span className="flex items-center gap-1.5">브랜드 및 채널 링크</span>
+                        <span className="text-[10px] text-neutral-500 font-normal bg-neutral-800/80 px-1.5 py-0.5 rounded">선택</span>
+                      </label>
                       <input
                         type="text"
                         value={formData.brandUrl}
                         onChange={(e) => setFormData({ ...formData, brandUrl: e.target.value })}
-                        placeholder="https://www.youtube.com/@channel 또는 웹사이트 링크"
-                        className="w-full rounded-lg border border-neutral-800 bg-[#0d0d10] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                        placeholder="예: https://youtube.com/@staylovey 또는 웹사이트 링크"
+                        className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
                       />
                     </div>
                   </div>
                 </section>
 
                 {/* [섹션 2] 의뢰 프로젝트 유형 */}
-                <section className="rounded-xl border border-neutral-800/80 bg-[#131317] p-5 sm:p-6 space-y-4 shadow-sm transition hover:border-neutral-700/60">
-                  <div className="flex items-center justify-between pb-3 border-b border-neutral-800/70">
+                <section className="rounded-2xl border border-neutral-800/90 bg-[#121217] p-5 sm:p-6 space-y-4 shadow-sm hover:border-neutral-700/80 transition-colors">
+                  <div className="flex items-center justify-between pb-3 border-b border-neutral-800/80">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-[11px] font-mono font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-indigo-500/10 border border-indigo-500/20 text-[11px] font-mono font-bold text-indigo-400">
                         02
                       </span>
                       <h3 className="text-sm sm:text-base font-semibold text-white tracking-tight">
@@ -568,7 +576,7 @@ ${formData.additionalNotes || '없음'}
                       </h3>
                     </div>
                     <span className="text-[11px] text-neutral-400">
-                      선택값에 맞춰 세부 항목이 자동 전환됩니다
+                      선택 시 세부 항목이 자동 구성됩니다
                     </span>
                   </div>
 
@@ -592,15 +600,15 @@ ${formData.additionalNotes || '없음'}
                           }}
                           className={`flex items-start gap-3.5 p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
                             isSelected
-                              ? 'border-indigo-500 bg-indigo-500/[0.08] text-white ring-1 ring-indigo-500/30 shadow-sm shadow-indigo-500/5'
-                              : 'border-neutral-800/90 bg-[#0e0e11] text-neutral-300 hover:border-neutral-700 hover:bg-neutral-900/60'
+                              ? 'border-indigo-500 bg-indigo-500/[0.08] text-white ring-1 ring-indigo-500/25 shadow-sm shadow-indigo-500/5'
+                              : 'border-neutral-800 bg-[#0b0b0e] text-neutral-300 hover:border-neutral-700 hover:bg-neutral-800/40'
                           }`}
                         >
                           <div
                             className={`p-2 rounded-lg shrink-0 mt-0.5 transition-colors ${
                               isSelected
-                                ? 'bg-indigo-600 text-white'
-                                : 'bg-neutral-800/70 text-neutral-400'
+                                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30'
+                                : 'bg-neutral-800/80 text-neutral-400'
                             }`}
                           >
                             {opt.icon}
@@ -631,20 +639,20 @@ ${formData.additionalNotes || '없음'}
                 </section>
 
                 {/* [섹션 3] 작업 세부 사항 (조건부 전환) */}
-                <section className="rounded-xl border border-neutral-800/80 bg-[#131317] p-5 sm:p-6 space-y-4 shadow-sm transition hover:border-neutral-700/60">
-                  <div className="flex items-center justify-between pb-3 border-b border-neutral-800/70">
+                <section className="rounded-2xl border border-neutral-800/90 bg-[#121217] p-5 sm:p-6 space-y-4 shadow-sm hover:border-neutral-700/80 transition-colors">
+                  <div className="flex items-center justify-between pb-3 border-b border-neutral-800/80">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-[11px] font-mono font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-indigo-500/10 border border-indigo-500/20 text-[11px] font-mono font-bold text-indigo-400">
                         03
                       </span>
                       <h3 className="text-sm sm:text-base font-semibold text-white tracking-tight">
                         작업 세부 사항
                       </h3>
                     </div>
-                    <span className="text-xs text-indigo-400 font-medium">
-                      {formData.projectType === 'youtube_long' && '유튜브 롱폼 영상'}
+                    <span className="text-xs text-indigo-400 font-medium px-2 py-0.5 rounded-md bg-indigo-500/10 border border-indigo-500/20">
+                      {formData.projectType === 'youtube_long' && '유튜브 롱폼'}
                       {formData.projectType === 'shortform' && '숏폼 영상'}
-                      {formData.projectType === 'ecommerce_detail' && '상세페이지 기획 & 디자인'}
+                      {formData.projectType === 'ecommerce_detail' && '상세페이지'}
                       {formData.projectType === 'other' && '기타 문의'}
                     </span>
                   </div>
@@ -656,8 +664,11 @@ ${formData.additionalNotes || '없음'}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {/* 원본 촬영본 분량 */}
                         <div id="field-videoRawFootage" className="space-y-1.5">
-                          <label className="block text-xs font-medium text-neutral-300">
-                            원본 촬영본 분량 (총 러닝타임 / 용량) <span className="text-rose-400">*</span>
+                          <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                            <span className="flex items-center gap-1.5">
+                              원본 촬영본 분량 (총 러닝타임 / 용량)
+                              <span className="text-rose-400 text-xs font-bold" title="필수">*</span>
+                            </span>
                           </label>
                           <input
                             type="text"
@@ -669,14 +680,14 @@ ${formData.additionalNotes || '없음'}
                               }
                             }}
                             placeholder="예: 4K 촬영본 약 1시간 분량 / 30GB"
-                            className={`w-full rounded-lg border bg-[#0d0d10] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all ${
+                            className={`w-full rounded-xl border bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all ${
                               errors.videoRawFootage
                                 ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
                                 : 'border-neutral-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20'
                             }`}
                           />
                           {errors.videoRawFootage && (
-                            <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1">
+                            <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1 font-medium">
                               <AlertCircle size={11} /> {errors.videoRawFootage}
                             </p>
                           )}
@@ -684,8 +695,11 @@ ${formData.additionalNotes || '없음'}
 
                         {/* 최종 납품 희망 영상 길이 */}
                         <div id="field-videoTargetLength" className="space-y-1.5">
-                          <label className="block text-xs font-medium text-neutral-300">
-                            최종 납품 희망 영상 길이 <span className="text-rose-400">*</span>
+                          <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                            <span className="flex items-center gap-1.5">
+                              최종 납품 희망 영상 길이
+                              <span className="text-rose-400 text-xs font-bold" title="필수">*</span>
+                            </span>
                           </label>
                           <input
                             type="text"
@@ -701,14 +715,14 @@ ${formData.additionalNotes || '없음'}
                                 ? '예: 30초 ~ 60초 내외'
                                 : '예: 10분 ~ 15분 내외'
                             }
-                            className={`w-full rounded-lg border bg-[#0d0d10] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all ${
+                            className={`w-full rounded-xl border bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all ${
                               errors.videoTargetLength
                                 ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
                                 : 'border-neutral-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20'
                             }`}
                           />
                           {errors.videoTargetLength && (
-                            <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1">
+                            <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1 font-medium">
                               <AlertCircle size={11} /> {errors.videoTargetLength}
                             </p>
                           )}
@@ -716,34 +730,32 @@ ${formData.additionalNotes || '없음'}
                       </div>
 
                       {/* 영상 자료 드라이브 URL */}
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <label className="block text-xs font-medium text-neutral-300 flex items-center gap-1.5">
+                      <div className="space-y-1.5 rounded-xl border border-neutral-800/70 bg-[#0b0b0e] p-3.5">
+                        <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                          <span className="flex items-center gap-1.5">
                             <HardDrive size={13} className="text-indigo-400" />
-                            <span>영상 자료 / 원본 드라이브 URL</span>
-                          </label>
-                          <span className="text-[11px] text-neutral-500">선택</span>
-                        </div>
+                            영상 자료 / 원본 드라이브 URL
+                          </span>
+                          <span className="text-[10px] text-neutral-500 font-normal bg-neutral-800/80 px-1.5 py-0.5 rounded">선택</span>
+                        </label>
                         <input
                           type="text"
                           value={formData.videoDriveUrl || ''}
                           onChange={(e) => setFormData({ ...formData, videoDriveUrl: e.target.value })}
                           placeholder="구글 드라이브, Dropbox 공유 링크 (권한: 링크가 있는 모든 사용자 보기 가능)"
-                          className="w-full rounded-lg border border-neutral-800 bg-[#0d0d10] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                          className="w-full rounded-lg border border-neutral-800 bg-[#121217] px-3.5 py-2 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
                         />
-                        <p className="text-[11px] text-neutral-400 leading-relaxed">
-                          촬영 원본 또는 대본 파일이 담긴 드라이브 링크를 함께 남겨주시면 더 빠르고 정확한 견적 검토가 가능합니다.
+                        <p className="text-[11px] text-neutral-400 leading-relaxed pt-0.5">
+                          촬영 원본 또는 대본 파일이 담긴 드라이브 링크를 남겨주시면 더 빠르고 정확한 견적 검토가 가능합니다.
                         </p>
                       </div>
 
                       {/* 작업 범위 */}
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <label className="block text-xs font-medium text-neutral-300">
-                            작업 범위
-                          </label>
-                          <span className="text-[11px] text-neutral-500">중복 선택 가능</span>
-                        </div>
+                      <div className="space-y-2 pt-1">
+                        <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                          <span>작업 범위 (중복 선택)</span>
+                          <span className="text-[10px] text-neutral-500 font-normal">다중 선택 가능</span>
+                        </label>
                         <div className="flex flex-wrap gap-2">
                           {videoScopeOptions.map((item) => {
                             const isChecked = formData.videoScope.includes(item);
@@ -755,7 +767,7 @@ ${formData.additionalNotes || '없음'}
                                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
                                   isChecked
                                     ? 'border-indigo-500 bg-indigo-500/15 text-indigo-300 shadow-sm'
-                                    : 'border-neutral-800 bg-[#0e0e11] text-neutral-400 hover:border-neutral-700 hover:text-neutral-200'
+                                    : 'border-neutral-800 bg-[#0b0b0e] text-neutral-400 hover:border-neutral-700 hover:text-neutral-200'
                                 }`}
                               >
                                 <span
@@ -773,19 +785,17 @@ ${formData.additionalNotes || '없음'}
                       </div>
 
                       {/* 업로드 주기 또는 의뢰 건수 */}
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <label className="block text-xs font-medium text-neutral-300">
-                            업로드 주기 또는 의뢰 건수
-                          </label>
-                          <span className="text-[11px] text-neutral-500">선택</span>
-                        </div>
+                      <div className="space-y-1.5 pt-1">
+                        <label className="flex items-center justify-between text-xs font-medium text-neutral-300">
+                          <span>업로드 주기 또는 의뢰 건수</span>
+                          <span className="text-[10px] text-neutral-500 font-normal bg-neutral-800/80 px-1.5 py-0.5 rounded">선택</span>
+                        </label>
                         <input
                           type="text"
                           value={formData.videoFrequency}
                           onChange={(e) => setFormData({ ...formData, videoFrequency: e.target.value })}
-                          placeholder="예: 단건 의뢰 / 주 1회 정기 업로드 / 월 4편 계약 등"
-                          className="w-full rounded-lg border border-neutral-800 bg-[#0d0d10] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                          placeholder="예: 단건 의뢰 / 주 1회 정기 업로드 / 월 4편 정기 계약"
+                          className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
                         />
                       </div>
                     </div>
@@ -796,8 +806,11 @@ ${formData.additionalNotes || '없음'}
                     <div className="space-y-4">
                       {/* 제품군 및 셀링 포인트 */}
                       <div id="field-ecommerceUsp" className="space-y-1.5">
-                        <label className="block text-xs font-medium text-neutral-300">
-                          제품군 및 주요 셀링 포인트(USP) <span className="text-rose-400">*</span>
+                        <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                          <span className="flex items-center gap-1.5">
+                            제품군 및 주요 셀링 포인트(USP)
+                            <span className="text-rose-400 text-xs font-bold" title="필수">*</span>
+                          </span>
                         </label>
                         <textarea
                           rows={3}
@@ -809,14 +822,14 @@ ${formData.additionalNotes || '없음'}
                             }
                           }}
                           placeholder="예: 기능성 스킨케어 앰플 — 특허 성분 흡수율 및 임상 전후 데이터 시각화 필요"
-                          className={`w-full rounded-lg border bg-[#0d0d10] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all resize-none ${
+                          className={`w-full rounded-xl border bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all resize-none ${
                             errors.ecommerceUsp
                               ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
                               : 'border-neutral-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20'
                           }`}
                         />
                         {errors.ecommerceUsp && (
-                          <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1">
+                          <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1 font-medium">
                             <AlertCircle size={11} /> {errors.ecommerceUsp}
                           </p>
                         )}
@@ -836,31 +849,29 @@ ${formData.additionalNotes || '없음'}
                       </div>
 
                       {/* 자료 드라이브 링크 입력 필드 */}
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <label className="block text-xs font-medium text-neutral-300 flex items-center gap-1.5">
+                      <div className="space-y-1.5 rounded-xl border border-neutral-800/70 bg-[#0b0b0e] p-3.5">
+                        <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                          <span className="flex items-center gap-1.5">
                             <HardDrive size={13} className="text-indigo-400" />
-                            <span>상세페이지 자료 드라이브 URL</span>
-                          </label>
-                          <span className="text-[11px] text-neutral-500">선택</span>
-                        </div>
+                            상세페이지 자료 드라이브 URL
+                          </span>
+                          <span className="text-[10px] text-neutral-500 font-normal bg-neutral-800/80 px-1.5 py-0.5 rounded">선택</span>
+                        </label>
                         <input
                           type="text"
                           value={formData.ecommerceDriveUrl || ''}
                           onChange={(e) => setFormData({ ...formData, ecommerceDriveUrl: e.target.value })}
                           placeholder="구글 드라이브, Dropbox, 네이버 MYBOX 공유 링크"
-                          className="w-full rounded-lg border border-neutral-800 bg-[#0d0d10] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                          className="w-full rounded-lg border border-neutral-800 bg-[#121217] px-3.5 py-2 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
                         />
                       </div>
 
                       {/* 제공 가능 리소스 */}
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <label className="block text-xs font-medium text-neutral-300">
-                            제공 가능 리소스
-                          </label>
-                          <span className="text-[11px] text-neutral-500">중복 선택 가능</span>
-                        </div>
+                      <div className="space-y-2 pt-1">
+                        <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                          <span>제공 가능 리소스 (중복 선택)</span>
+                          <span className="text-[10px] text-neutral-500 font-normal">다중 선택 가능</span>
+                        </label>
                         <div className="flex flex-wrap gap-2">
                           {ecommerceResourceOptions.map((item) => {
                             const isChecked = formData.ecommerceResources.includes(item);
@@ -872,7 +883,7 @@ ${formData.additionalNotes || '없음'}
                                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
                                   isChecked
                                     ? 'border-indigo-500 bg-indigo-500/15 text-indigo-300 shadow-sm'
-                                    : 'border-neutral-800 bg-[#0e0e11] text-neutral-400 hover:border-neutral-700 hover:text-neutral-200'
+                                    : 'border-neutral-800 bg-[#0b0b0e] text-neutral-400 hover:border-neutral-700 hover:text-neutral-200'
                                 }`}
                               >
                                 <span
@@ -890,19 +901,17 @@ ${formData.additionalNotes || '없음'}
                       </div>
 
                       {/* 예상 작업 분량 */}
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <label className="block text-xs font-medium text-neutral-300">
-                            예상 작업 분량
-                          </label>
-                          <span className="text-[11px] text-neutral-500">선택</span>
-                        </div>
+                      <div className="space-y-1.5 pt-1">
+                        <label className="flex items-center justify-between text-xs font-medium text-neutral-300">
+                          <span>예상 작업 분량</span>
+                          <span className="text-[10px] text-neutral-500 font-normal bg-neutral-800/80 px-1.5 py-0.5 rounded">선택</span>
+                        </label>
                         <input
                           type="text"
                           value={formData.ecommerceWorkload}
                           onChange={(e) => setFormData({ ...formData, ecommerceWorkload: e.target.value })}
                           placeholder="예: 모바일 가로 860px 기준 8~12개 섹션 내외"
-                          className="w-full rounded-lg border border-neutral-800 bg-[#0d0d10] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                          className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
                         />
                       </div>
                     </div>
@@ -911,8 +920,11 @@ ${formData.additionalNotes || '없음'}
                   {/* CASE 3: 기타 */}
                   {formData.projectType === 'other' && (
                     <div id="field-otherDetails" className="space-y-1.5">
-                      <label className="block text-xs font-medium text-neutral-300">
-                        문의 세부 내용 직접 입력 <span className="text-rose-400">*</span>
+                      <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                        <span className="flex items-center gap-1.5">
+                          문의 세부 내용 직접 입력
+                          <span className="text-rose-400 text-xs font-bold" title="필수">*</span>
+                        </span>
                       </label>
                       <textarea
                         rows={4}
@@ -924,14 +936,14 @@ ${formData.additionalNotes || '없음'}
                           }
                         }}
                         placeholder="기획 의도, 프로젝트 목표, 필요하신 협업 범위(브랜딩/모션/종합 콘텐츠 등)를 구체적으로 남겨주세요."
-                        className={`w-full rounded-lg border bg-[#0d0d10] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all resize-none ${
+                        className={`w-full rounded-xl border bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all resize-none ${
                           errors.otherDetails
                             ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
                             : 'border-neutral-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20'
                         }`}
                       />
                       {errors.otherDetails && (
-                        <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1">
+                        <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1 font-medium">
                           <AlertCircle size={11} /> {errors.otherDetails}
                         </p>
                       )}
@@ -940,151 +952,152 @@ ${formData.additionalNotes || '없음'}
                 </section>
 
                 {/* [섹션 4] 레퍼런스 및 스타일 가이드 */}
-                <section className="rounded-xl border border-neutral-800/80 bg-[#131317] p-5 sm:p-6 space-y-4 shadow-sm transition hover:border-neutral-700/60">
-                  <div className="flex items-center justify-between pb-3 border-b border-neutral-800/70">
+                <section className="rounded-2xl border border-neutral-800/90 bg-[#121217] p-5 sm:p-6 space-y-4 shadow-sm hover:border-neutral-700/80 transition-colors">
+                  <div className="flex items-center justify-between pb-3 border-b border-neutral-800/80">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-[11px] font-mono font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-indigo-500/10 border border-indigo-500/20 text-[11px] font-mono font-bold text-indigo-400">
                         04
                       </span>
                       <h3 className="text-sm sm:text-base font-semibold text-white tracking-tight">
                         레퍼런스 및 스타일 가이드
                       </h3>
                     </div>
-                    <span className="text-[11px] text-neutral-500 font-medium">선택 사항</span>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-neutral-400 bg-neutral-800/80 border border-neutral-700/60 px-2 py-0.5 rounded-full">
+                      선택 사항
+                    </span>
                   </div>
 
                   <div className="space-y-4">
                     {/* 지향하는 무드 / 톤앤매너 */}
                     <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-xs font-medium text-neutral-300">
-                          지향하는 무드 / 톤앤매너
-                        </label>
-                        <span className="text-[11px] text-neutral-500">선택</span>
-                      </div>
+                      <label className="flex items-center justify-between text-xs font-medium text-neutral-300">
+                        <span>지향하는 무드 / 톤앤매너</span>
+                        <span className="text-[10px] text-neutral-500 font-normal bg-neutral-800/80 px-1.5 py-0.5 rounded">선택</span>
+                      </label>
                       <input
                         type="text"
                         value={formData.targetMood}
                         onChange={(e) => setFormData({ ...formData, targetMood: e.target.value })}
                         placeholder="예: 미니멀하고 신뢰감 있는 톤 / 빠른 템포의 예능형 / 감성적 시네마틱 룩"
-                        className="w-full rounded-lg border border-neutral-800 bg-[#0d0d10] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                        className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
                       />
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {/* 참고 레퍼런스 링크 1 (선택) */}
                       <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <label className="block text-xs font-medium text-neutral-300 flex items-center gap-1.5">
+                        <label className="flex items-center justify-between text-xs font-medium text-neutral-300">
+                          <span className="flex items-center gap-1.5">
                             <LinkIcon size={12} className="text-neutral-500" />
-                            <span>참고 레퍼런스 링크 1</span>
-                          </label>
-                          <span className="text-[11px] text-neutral-500">선택</span>
-                        </div>
+                            참고 레퍼런스 링크 1
+                          </span>
+                          <span className="text-[10px] text-neutral-500 font-normal bg-neutral-800/80 px-1.5 py-0.5 rounded">선택</span>
+                        </label>
                         <input
                           type="text"
                           value={formData.referenceLink1}
                           onChange={(e) => setFormData({ ...formData, referenceLink1: e.target.value })}
-                          placeholder="유튜브 영상 링크 또는 웹페이지 URL"
-                          className="w-full rounded-lg border border-neutral-800 bg-[#0d0d10] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                          placeholder="예: https://youtube.com/watch?v=... 또는 웹페이지 링크"
+                          className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
                         />
                       </div>
 
                       {/* 참고 레퍼런스 링크 2 (선택) */}
                       <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <label className="block text-xs font-medium text-neutral-300 flex items-center gap-1.5">
+                        <label className="flex items-center justify-between text-xs font-medium text-neutral-300">
+                          <span className="flex items-center gap-1.5">
                             <LinkIcon size={12} className="text-neutral-500" />
-                            <span>참고 레퍼런스 링크 2</span>
-                          </label>
-                          <span className="text-[11px] text-neutral-500">선택</span>
-                        </div>
+                            참고 레퍼런스 링크 2
+                          </span>
+                          <span className="text-[10px] text-neutral-500 font-normal bg-neutral-800/80 px-1.5 py-0.5 rounded">선택</span>
+                        </label>
                         <input
                           type="text"
                           value={formData.referenceLink2}
                           onChange={(e) => setFormData({ ...formData, referenceLink2: e.target.value })}
                           placeholder="추가 참고 레퍼런스 URL (선택)"
-                          className="w-full rounded-lg border border-neutral-800 bg-[#0d0d10] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                          className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
                         />
                       </div>
                     </div>
 
                     {/* 지양하는 스타일 */}
                     <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-xs font-medium text-neutral-300">
-                          지양하는 스타일이나 필수 주의사항
-                        </label>
-                        <span className="text-[11px] text-neutral-500">선택</span>
-                      </div>
+                      <label className="flex items-center justify-between text-xs font-medium text-neutral-300">
+                        <span>지양하는 스타일이나 필수 주의사항</span>
+                        <span className="text-[10px] text-neutral-500 font-normal bg-neutral-800/80 px-1.5 py-0.5 rounded">선택</span>
+                      </label>
                       <input
                         type="text"
                         value={formData.avoidStyles}
                         onChange={(e) => setFormData({ ...formData, avoidStyles: e.target.value })}
-                        placeholder="예: 자극적인 자막 지양 / 브랜드 공식 CI 가이드라인 준수 필수"
-                        className="w-full rounded-lg border border-neutral-800 bg-[#0d0d10] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                        placeholder="예: 자극적인 자막 지양 / 브랜드 공식 CI 및 컬러 가이드라인 준수"
+                        className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
                       />
                     </div>
                   </div>
                 </section>
 
                 {/* [섹션 5] 일정 및 예산 */}
-                <section className="rounded-xl border border-neutral-800/80 bg-[#131317] p-5 sm:p-6 space-y-4 shadow-sm transition hover:border-neutral-700/60">
-                  <div className="flex items-center justify-between pb-3 border-b border-neutral-800/70">
+                <section className="rounded-2xl border border-neutral-800/90 bg-[#121217] p-5 sm:p-6 space-y-4.5 shadow-sm hover:border-neutral-700/80 transition-colors">
+                  <div className="flex items-center justify-between pb-3 border-b border-neutral-800/80">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-[11px] font-mono font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-indigo-500/10 border border-indigo-500/20 text-[11px] font-mono font-bold text-indigo-400">
                         05
                       </span>
                       <h3 className="text-sm sm:text-base font-semibold text-white tracking-tight">
                         일정 및 예산
                       </h3>
                     </div>
-                    <span className="text-[11px] text-neutral-500 font-medium">
-                      <span className="text-rose-400">*</span> 필수 항목 포함
+                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-rose-300 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-full">
+                      <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
+                      납품일 & 예산 필수
                     </span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {/* 원본 전달 가능일 */}
                     <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-xs font-medium text-neutral-300 flex items-center gap-1.5">
+                      <label className="flex items-center justify-between text-xs font-medium text-neutral-300">
+                        <span className="flex items-center gap-1.5">
                           <Calendar size={12} className="text-neutral-500" />
-                          <span>자료 전달 가능일</span>
-                        </label>
-                        <span className="text-[11px] text-neutral-500">선택</span>
-                      </div>
+                          자료 전달 가능일
+                        </span>
+                        <span className="text-[10px] text-neutral-500 font-normal bg-neutral-800/80 px-1.5 py-0.5 rounded">선택</span>
+                      </label>
                       <input
                         type="date"
                         value={formData.rawMaterialDate}
                         onChange={(e) => setFormData({ ...formData, rawMaterialDate: e.target.value })}
-                        className="w-full rounded-lg border border-neutral-800 bg-[#0d0d10] px-3 py-2.5 text-xs sm:text-sm text-neutral-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                        className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3 py-2.5 text-xs sm:text-sm text-neutral-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
                       />
                     </div>
 
                     {/* 1차 시안 희망일 */}
                     <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-xs font-medium text-neutral-300 flex items-center gap-1.5">
+                      <label className="flex items-center justify-between text-xs font-medium text-neutral-300">
+                        <span className="flex items-center gap-1.5">
                           <Calendar size={12} className="text-neutral-500" />
-                          <span>1차 시안 희망일</span>
-                        </label>
-                        <span className="text-[11px] text-neutral-500">선택</span>
-                      </div>
+                          1차 시안 희망일
+                        </span>
+                        <span className="text-[10px] text-neutral-500 font-normal bg-neutral-800/80 px-1.5 py-0.5 rounded">선택</span>
+                      </label>
                       <input
                         type="date"
                         value={formData.firstDraftDate}
                         onChange={(e) => setFormData({ ...formData, firstDraftDate: e.target.value })}
-                        className="w-full rounded-lg border border-neutral-800 bg-[#0d0d10] px-3 py-2.5 text-xs sm:text-sm text-neutral-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                        className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3 py-2.5 text-xs sm:text-sm text-neutral-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
                       />
                     </div>
 
                     {/* 최종 납품 희망일 (필수) */}
                     <div id="field-finalDeliveryDate" className="space-y-1.5">
-                      <label className="block text-xs font-medium text-neutral-300 flex items-center gap-1.5">
-                        <Calendar size={12} className="text-indigo-400" />
-                        <span>최종 납품 희망일</span>
-                        <span className="text-rose-400">*</span>
+                      <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                        <span className="flex items-center gap-1.5">
+                          <Calendar size={12} className="text-indigo-400" />
+                          최종 납품 희망일
+                          <span className="text-rose-400 text-xs font-bold" title="필수">*</span>
+                        </span>
                       </label>
                       <input
                         type="date"
@@ -1095,14 +1108,14 @@ ${formData.additionalNotes || '없음'}
                             setErrors({ ...errors, finalDeliveryDate: '' });
                           }
                         }}
-                        className={`w-full rounded-lg border bg-[#0d0d10] px-3 py-2.5 text-xs sm:text-sm text-neutral-100 focus:outline-none transition-all ${
+                        className={`w-full rounded-xl border bg-[#0b0b0e] px-3 py-2.5 text-xs sm:text-sm text-neutral-100 focus:outline-none transition-all ${
                           errors.finalDeliveryDate
                             ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
                             : 'border-neutral-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20'
                         }`}
                       />
                       {errors.finalDeliveryDate && (
-                        <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1">
+                        <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1 font-medium">
                           <AlertCircle size={11} /> {errors.finalDeliveryDate}
                         </p>
                       )}
@@ -1110,11 +1123,13 @@ ${formData.additionalNotes || '없음'}
                   </div>
 
                   {/* 책정 예산 범위 (필수) */}
-                  <div id="field-budgetRange" className="space-y-1.5 pt-1">
-                    <label className="block text-xs font-medium text-neutral-300 flex items-center gap-1.5">
-                      <DollarSign size={13} className="text-indigo-400" />
-                      <span>책정 예산 범위</span>
-                      <span className="text-rose-400">*</span>
+                  <div id="field-budgetRange" className="space-y-1.5 pt-2">
+                    <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                      <span className="flex items-center gap-1.5">
+                        <DollarSign size={13} className="text-indigo-400" />
+                        책정 예산 범위
+                        <span className="text-rose-400 text-xs font-bold" title="필수">*</span>
+                      </span>
                     </label>
 
                     <input
@@ -1127,7 +1142,7 @@ ${formData.additionalNotes || '없음'}
                         }
                       }}
                       placeholder="희망하시는 금액을 적어주세요"
-                      className={`w-full rounded-lg border bg-[#0d0d10] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all ${
+                      className={`w-full rounded-xl border bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all ${
                         errors.budgetRange
                           ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
                           : 'border-neutral-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20'
@@ -1135,29 +1150,31 @@ ${formData.additionalNotes || '없음'}
                     />
 
                     {errors.budgetRange ? (
-                      <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1">
+                      <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1 font-medium">
                         <AlertCircle size={11} /> {errors.budgetRange}
                       </p>
                     ) : (
-                      <p className="text-[11px] text-neutral-500">
-                        예산에 맞춰 최적의 작업 범위와 퀄리티 방안을 유연하게 제안해 드립니다.
+                      <p className="text-[11px] text-neutral-500 leading-relaxed">
+                        희망하시는 예산에 맞춰 최적의 작업 범위와 퀄리티 방안을 유연하게 제안해 드립니다.
                       </p>
                     )}
                   </div>
                 </section>
 
                 {/* [섹션 6] 기타 요청 및 전달사항 */}
-                <section className="rounded-xl border border-neutral-800/80 bg-[#131317] p-5 sm:p-6 space-y-4 shadow-sm transition hover:border-neutral-700/60">
-                  <div className="flex items-center justify-between pb-3 border-b border-neutral-800/70">
+                <section className="rounded-2xl border border-neutral-800/90 bg-[#121217] p-5 sm:p-6 space-y-4 shadow-sm hover:border-neutral-700/80 transition-colors">
+                  <div className="flex items-center justify-between pb-3 border-b border-neutral-800/80">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-[11px] font-mono font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-indigo-500/10 border border-indigo-500/20 text-[11px] font-mono font-bold text-indigo-400">
                         06
                       </span>
                       <h3 className="text-sm sm:text-base font-semibold text-white tracking-tight">
                         기타 요청 및 전달사항
                       </h3>
                     </div>
-                    <span className="text-[11px] text-neutral-500 font-medium">선택 사항</span>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-neutral-400 bg-neutral-800/80 border border-neutral-700/60 px-2 py-0.5 rounded-full">
+                      선택 사항
+                    </span>
                   </div>
 
                   <div className="space-y-1.5">
@@ -1166,13 +1183,13 @@ ${formData.additionalNotes || '없음'}
                       value={formData.additionalNotes}
                       onChange={(e) => setFormData({ ...formData, additionalNotes: e.target.value })}
                       placeholder="작업 시 특별히 강조하고 싶은 점이나 협의가 필요한 사항을 자유롭게 적어주세요."
-                      className="w-full rounded-lg border border-neutral-800 bg-[#0d0d10] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all resize-none"
+                      className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all resize-none"
                     />
                   </div>
                 </section>
 
                 {/* 하단 고정 전송 버튼 */}
-                <div className="pt-3 sticky bottom-0 bg-[#0d0d10]/95 pb-1 backdrop-blur-md border-t border-neutral-800/60">
+                <div className="pt-3 sticky bottom-0 bg-[#0d0d10]/95 pb-1 backdrop-blur-md border-t border-neutral-800/80">
                   <button
                     type="submit"
                     disabled={isSubmitting}
