@@ -283,23 +283,10 @@ ${formData.additionalNotes || '없음'}
       // Ignore clipboard fallback error
     }
 
-    // 2. Build mailto link
-    const subject = `[프로젝트 문의] ${formData.companyOrChannel} (${formData.managerNameAndTitle}님)`;
-    const mailtoUrl = `mailto:${targetEmail}?subject=${encodeURIComponent(
-      subject
-    )}&body=${encodeURIComponent(summary)}`;
-
-    // 3. Trigger mail client
-    try {
-      window.location.href = mailtoUrl;
-    } catch {
-      // Fallback
-    }
-
     setTimeout(() => {
       setIsSubmitting(false);
       setIsSubmitted(true);
-      onShowToast('문의 내용이 클립보드에 복사되었으며 메일 앱이 실행되었습니다.');
+      onShowToast('문의 내용이 클립보드에 복사되었습니다.');
     }, 350);
   };
 
@@ -384,9 +371,9 @@ ${formData.additionalNotes || '없음'}
                     프로젝트 문의 작성이 완료되었습니다
                   </h3>
                   <p className="text-xs sm:text-sm text-neutral-400 leading-relaxed break-keep">
-                    기본 메일 앱이 실행되었습니다. 메일 앱이 바로 열리지 않더라도
-                    <strong className="text-neutral-200"> 내용이 클립보드에 복사</strong>되어 있으니
-                    네이버, Gmail 등 웹메일에 그대로 붙여넣어 전송하실 수 있습니다.
+                    작성해주신 프로젝트 문의 내용이
+                    <strong className="text-neutral-200"> 클립보드에 복사</strong>되었습니다.
+                    수신 메일 주소로 편하게 전달해 주시면 검토 후 빠르게 회신드리겠습니다.
                   </p>
                 </div>
 
@@ -403,17 +390,17 @@ ${formData.additionalNotes || '없음'}
                       className="w-full sm:flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-medium text-xs transition cursor-pointer border border-neutral-700"
                     >
                       {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
-                      {copied ? '복사 완료' : '문의 전문 다시 복사'}
+                      {copied ? '복사 완료' : '문의 내용 다시 복사'}
                     </button>
 
                     <a
                       href={`mailto:${targetEmail}?subject=${encodeURIComponent(
                         `[프로젝트 문의] ${formData.companyOrChannel}`
                       )}&body=${encodeURIComponent(formattedSummary)}`}
-                      className="w-full sm:flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs transition cursor-pointer shadow-md shadow-indigo-600/20"
+                      className="w-full sm:flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg bg-indigo-600/90 hover:bg-indigo-600 text-white font-medium text-xs transition cursor-pointer shadow-md shadow-indigo-600/20"
                     >
-                      <ExternalLink size={13} />
-                      메일 앱 다시 열기
+                      <Mail size={13} />
+                      메일 앱으로 열기 (선택)
                     </a>
                   </div>
                 </div>
@@ -1192,7 +1179,7 @@ ${formData.additionalNotes || '없음'}
                     )}
                   </button>
                   <p className="mt-2 text-center text-[11px] text-neutral-500">
-                    클릭 시 문의 내용이 클립보드에 자동 복사되고 {targetEmail} 수신 메일 창이 호출됩니다.
+                    작성 완료 시 입력하신 문의 내용이 정리되어 클립보드에 자동 복사됩니다.
                   </p>
                 </div>
               </form>

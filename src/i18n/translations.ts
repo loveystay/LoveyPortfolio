@@ -216,7 +216,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
       emailLabel: 'CONTACT',
       copyEmail: '이메일 주소 복사',
       copied: '이메일이 복사되었습니다!',
-      aiConsultBtn: '1:1 AI 상담 및 프로젝트 문의',
+      aiConsultBtn: '프로젝트 맞춤 의뢰하기 (Start a Project)',
     },
     worksPage: {
       title: 'Selected Works',
@@ -481,7 +481,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
       emailLabel: 'CONTACT',
       copyEmail: 'Copy Email Address',
       copied: 'Email copied to clipboard!',
-      aiConsultBtn: '1:1 AI Project Inquiry & Consultation',
+      aiConsultBtn: 'Start a Project (Custom Inquiry)',
     },
     worksPage: {
       title: 'Selected Works',
@@ -746,7 +746,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
       emailLabel: 'CONTACT',
       copyEmail: 'メールアドレスをコピー',
       copied: 'メールアドレスをコピーしました！',
-      aiConsultBtn: '1:1 AI相談・プロジェクトお問い合わせ',
+      aiConsultBtn: 'プロジェクトのご依頼 (Start a Project)',
     },
     worksPage: {
       title: 'Selected Works',
