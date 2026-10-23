@@ -71,18 +71,20 @@ export interface StartProjectFormData {
   videoTargetLength?: string;    // 필수 (영상 선택 시): 최종 납품 희망 길이
   videoScope: string[];          // 다중선택: 컷편집, 자막, 모션·CG, BGM·효과음, 썸네일
   videoFrequency?: string;       // 선택: 업로드 주기 또는 의뢰 건수
+  videoDriveUrl?: string;        // 선택: 영상 자료 / 원본 드라이브 링크
 
   // CASE 2: E-커머스 상세페이지
   ecommerceUsp?: string;         // 필수 (상세페이지 선택 시): 제품군 및 주요 셀링 포인트
   ecommerceResources: string[];  // 다중선택: 기획안 유무, 연출컷/누끼컷, 원고 보유
   ecommerceWorkload?: string;    // 선택: 예상 작업 분량
+  ecommerceDriveUrl?: string;    // 선택: 상세페이지 기획/이미지 드라이브 링크
 
   // CASE 3: 기타
   otherDetails?: string;         // 필수 (기타 선택 시): 문의 세부 내용 직접 입력
 
   // [섹션 4] 레퍼런스 및 스타일 가이드 (항상 노출)
   targetMood?: string;           // 선택: 지향하는 무드 / 톤앤매너
-  referenceLink1: string;        // 필수: 참고 레퍼런스 링크 1
+  referenceLink1?: string;       // 선택: 참고 레퍼런스 링크 1 (선택 항목으로 전환)
   referenceLink2?: string;       // 선택: 참고 레퍼런스 링크 2
   avoidStyles?: string;          // 선택: 지양하는 스타일이나 필수 주의사항
 
