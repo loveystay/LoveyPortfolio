@@ -68,12 +68,6 @@ const DEFAULT_FORM_DATA: StartProjectFormData = {
   additionalNotes: '',
 };
 
-const BUDGET_PRESETS = [
-  '건당 15~30만 원 (기본/숏폼)',
-  '건당 30~50만 원 (표준 편집)',
-  '건당 50~80만 원 (고품질/상세페이지)',
-  '월 정기 계약 / 협의',
-];
 
 export const ContactModal: React.FC<ContactModalProps> = ({
   isOpen,
@@ -199,7 +193,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
       newErrors.finalDeliveryDate = '최종 완료 및 납품 희망일을 입력해 주세요.';
     }
     if (!formData.budgetRange.trim()) {
-      newErrors.budgetRange = '책정 예산 범위를 입력해 주세요.';
+      newErrors.budgetRange = '희망하시는 금액을 입력해 주세요.';
     }
 
     setErrors(newErrors);
@@ -987,7 +981,7 @@ ${formData.additionalNotes || '없음'}
                   </div>
                 </div>
 
-                {/* [섹션 5] 일정 및 예산 (금액 예시 하향 및 퀵 선택 칩 제공) */}
+                {/* [섹션 5] 일정 및 예산 */}
                 <div className="rounded-xl border border-neutral-800/80 bg-[#161619] p-4 sm:p-5 space-y-4">
                   <div className="flex items-center justify-between pb-1 border-b border-neutral-800/50">
                     <div className="flex items-center gap-2">
@@ -1059,7 +1053,7 @@ ${formData.additionalNotes || '없음'}
                   </div>
 
                   {/* 책정 예산 범위 (필수) */}
-                  <div id="field-budgetRange" className="space-y-2">
+                  <div id="field-budgetRange" className="space-y-1.5">
                     <label className="block text-xs font-medium text-neutral-300 flex items-center gap-1">
                       <DollarSign size={12} className="text-indigo-400" />
                       <span>책정 예산 범위</span>
@@ -1075,33 +1069,13 @@ ${formData.additionalNotes || '없음'}
                           setErrors({ ...errors, budgetRange: '' });
                         }
                       }}
-                      placeholder="예: 건당 15~30만 원 선 / 30~50만 원 선 / 월 계약 50~100만 원 선 (VAT 별도/협의)"
+                      placeholder="희망하시는 금액을 적어주세요"
                       className={`w-full rounded-lg border bg-neutral-900/90 px-3 py-2 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition ${
                         errors.budgetRange
                           ? 'border-rose-500 focus:border-rose-500'
                           : 'border-neutral-700/70 focus:border-indigo-500'
                       }`}
                     />
-
-                    {/* 빠른 예산 선택 칩 */}
-                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                      <span className="text-[11px] text-neutral-500 mr-0.5">추천 선택:</span>
-                      {BUDGET_PRESETS.map((preset) => (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => {
-                            setFormData((prev) => ({ ...prev, budgetRange: preset }));
-                            if (errors.budgetRange) {
-                              setErrors((prev) => ({ ...prev, budgetRange: '' }));
-                            }
-                          }}
-                          className="px-2 py-1 rounded-md text-[11px] bg-neutral-800/80 hover:bg-neutral-700 text-neutral-300 hover:text-white transition cursor-pointer border border-neutral-750"
-                        >
-                          {preset}
-                        </button>
-                      ))}
-                    </div>
 
                     {errors.budgetRange && (
                       <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1">
