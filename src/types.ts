@@ -59,7 +59,8 @@ export interface StartProjectFormData {
   // [섹션 1] 기본 정보 (항상 노출 / 고정)
   companyOrChannel: string;      // 필수: 업체/채널명
   managerNameAndTitle: string;   // 필수: 담당자 성함 / 직함
-  contact: string;               // 필수: 연락처 (유선 / 메일)
+  contact: string;               // 필수: 연락처
+  email: string;                 // 필수: 이메일
   brandUrl?: string;             // 선택: 브랜드 및 채널 링크
 
   // [섹션 2] 의뢰 프로젝트 유형 (항상 노출 / 트리거 선택자)

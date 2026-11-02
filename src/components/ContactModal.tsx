@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   X,
   Send,
@@ -34,6 +34,7 @@ const DEFAULT_FORM_DATA: StartProjectFormData = {
   companyOrChannel: '',
   managerNameAndTitle: '',
   contact: '',
+  email: '',
   brandUrl: '',
 
   // [섹션 2] 프로젝트 유형
@@ -85,6 +86,22 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [formattedSummary, setFormattedSummary] = useState('');
   const [copied, setCopied] = useState(false);
+  const honeypotRef = useRef<HTMLInputElement>(null);
+
+  const hasValidRequiredFields =
+    Boolean(formData.companyOrChannel.trim()) &&
+    Boolean(formData.managerNameAndTitle.trim()) &&
+    Boolean(formData.contact.trim()) &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim()) &&
+    Boolean(formData.finalDeliveryDate.trim()) &&
+    Boolean(formData.budgetRange.trim()) &&
+    (formData.projectType === 'youtube_long' || formData.projectType === 'shortform'
+      ? Boolean(formData.videoRawFootage?.trim()) && Boolean(formData.videoTargetLength?.trim())
+      : formData.projectType === 'ecommerce_detail'
+      ? Boolean(formData.ecommerceUsp?.trim())
+      : formData.projectType === 'other'
+      ? Boolean(formData.otherDetails?.trim())
+      : false);
 
   const targetEmail = 'contact@staylovey.com';
 
@@ -160,7 +177,12 @@ export const ContactModal: React.FC<ContactModalProps> = ({
       newErrors.managerNameAndTitle = '담당자 성함 및 직함을 입력해 주세요.';
     }
     if (!formData.contact.trim()) {
-      newErrors.contact = '연락처(유선 또는 메일)를 입력해 주세요.';
+      newErrors.contact = '연락처를 입력해 주세요.';
+    }
+    if (!formData.email.trim()) {
+      newErrors.email = '이메일을 입력해 주세요.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      newErrors.email = '올바른 이메일 주소를 입력해 주세요.';
     }
 
     // [섹션 3] 조건부 필수 검증
@@ -240,7 +262,8 @@ ${formData.otherDetails || '-'}`.trim();
 ■ [섹션 1] 기본 정보
 • 업체/채널명: ${formData.companyOrChannel}
 • 담당자 성함 / 직함: ${formData.managerNameAndTitle}
-• 연락처 (유선 / 메일): ${formData.contact}
+• 연락처: ${formData.contact}
+• 이메일: ${formData.email}
 • 브랜드 및 채널 링크: ${formData.brandUrl || '미입력'}
 
 ■ [섹션 2] 의뢰 프로젝트 유형
@@ -272,22 +295,40 @@ ${formData.additionalNotes || '없음'}
 
     setIsSubmitting(true);
     const summary = generateProjectSummaryText();
-    setFormattedSummary(summary);
-
-    // 1. Copy to clipboard automatically for convenience
     try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(summary);
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          summary,
+          email: formData.email,
+          companyOrChannel: formData.companyOrChannel,
+          website: honeypotRef.current?.value ?? '',
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (response.status === 503) {
+        throw new Error('메일 발송 설정이 완료되지 않았습니다. 관리자에게 문의해 주세요.');
       }
-    } catch {
-      // Ignore clipboard fallback error
-    }
+      if (!response.headers.get('content-type')?.includes('application/json')) {
+        throw new Error('메일 발송 API를 찾을 수 없습니다. 배포 설정을 확인해 주세요.');
+      }
+      if (!response.ok || result?.ok !== true) {
+        throw new Error('메일 전송에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+      }
 
-    setTimeout(() => {
-      setIsSubmitting(false);
+      setFormattedSummary(summary);
       setIsSubmitted(true);
-      onShowToast('문의 내용이 클립보드에 복사되었습니다.');
-    }, 350);
+      onShowToast('프로젝트 문의가 이메일로 전송되었습니다.');
+    } catch (error) {
+      onShowToast(
+        error instanceof Error
+          ? error.message
+          : '문의 전송에 실패했습니다. 잠시 후 다시 시도해 주세요.',
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCopySummary = async () => {
@@ -371,9 +412,9 @@ ${formData.additionalNotes || '없음'}
                     프로젝트 문의 작성이 완료되었습니다
                   </h3>
                   <p className="text-xs sm:text-sm text-neutral-400 leading-relaxed break-keep">
-                    작성해주신 프로젝트 문의 내용이
-                    <strong className="text-neutral-200"> 클립보드에 복사</strong>되었습니다.
-                    수신 메일 주소로 편하게 전달해 주시면 검토 후 빠르게 회신드리겠습니다.
+                    작성해주신 프로젝트 문의를
+                    <strong className="text-neutral-200"> {targetEmail}</strong>으로 전송했습니다.
+                    확인 후 입력하신 이메일로 회신드리겠습니다.
                   </p>
                 </div>
 
@@ -384,24 +425,14 @@ ${formData.additionalNotes || '없음'}
                     <strong className="text-white font-mono">{targetEmail}</strong>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row items-center gap-2.5 pt-1">
+                  <div className="pt-1">
                     <button
                       onClick={handleCopySummary}
-                      className="w-full sm:flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-medium text-xs transition cursor-pointer border border-neutral-700"
+                      className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-medium text-xs transition cursor-pointer border border-neutral-700"
                     >
                       {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
-                      {copied ? '복사 완료' : '문의 내용 다시 복사'}
+                      {copied ? '복사 완료' : '문의 내용 복사'}
                     </button>
-
-                    <a
-                      href={`mailto:${targetEmail}?subject=${encodeURIComponent(
-                        `[프로젝트 문의] ${formData.companyOrChannel}`
-                      )}&body=${encodeURIComponent(formattedSummary)}`}
-                      className="w-full sm:flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg bg-indigo-600/90 hover:bg-indigo-600 text-white font-medium text-xs transition cursor-pointer shadow-md shadow-indigo-600/20"
-                    >
-                      <Mail size={13} />
-                      메일 앱으로 열기 (선택)
-                    </a>
                   </div>
                 </div>
 
@@ -417,7 +448,21 @@ ${formData.additionalNotes || '없음'}
               </div>
             ) : (
               /* Clean Form */
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={handleSubmit} noValidate className="space-y-5">
+                <div
+                  aria-hidden="true"
+                  className="absolute -left-[10000px] top-auto h-px w-px overflow-hidden"
+                >
+                  <label htmlFor="contact-website">Leave this field empty</label>
+                  <input
+                    ref={honeypotRef}
+                    id="contact-website"
+                    name="website"
+                    type="text"
+                    tabIndex={-1}
+                    autoComplete="off"
+                  />
+                </div>
                 {/* [섹션 1] 기본 정보 */}
                 <section className="rounded-2xl border border-neutral-800/90 bg-[#121217] p-5 sm:p-6 space-y-4 shadow-sm hover:border-neutral-700/80 transition-colors">
                   <div className="flex items-center justify-between pb-3 border-b border-neutral-800/80">
@@ -502,12 +547,13 @@ ${formData.additionalNotes || '없음'}
                     <div id="field-contact" className="space-y-1.5">
                       <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
                         <span className="flex items-center gap-1.5">
-                          연락처 (유선 또는 이메일)
+                          연락처
                           <span className="text-rose-400 text-xs font-bold" title="필수">*</span>
                         </span>
                       </label>
                       <input
-                        type="text"
+                        type="tel"
+                        autoComplete="tel"
                         value={formData.contact}
                         onChange={(e) => {
                           setFormData({ ...formData, contact: e.target.value });
@@ -515,7 +561,7 @@ ${formData.additionalNotes || '없음'}
                             setErrors({ ...errors, contact: '' });
                           }
                         }}
-                        placeholder="연락받으실 유선 번호 또는 이메일"
+                        placeholder="연락받으실 연락처를 입력해 주세요"
                         className={`w-full rounded-xl border bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all ${
                           errors.contact
                             ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
@@ -525,6 +571,39 @@ ${formData.additionalNotes || '없음'}
                       {errors.contact && (
                         <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1 font-medium">
                           <AlertCircle size={11} /> {errors.contact}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 이메일 */}
+                    <div id="field-email" className="space-y-1.5">
+                      <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                        <span className="flex items-center gap-1.5">
+                          이메일
+                          <span className="text-rose-400 text-xs font-bold" title="필수">*</span>
+                        </span>
+                      </label>
+                      <input
+                        type="email"
+                        inputMode="email"
+                        autoComplete="email"
+                        value={formData.email}
+                        onChange={(e) => {
+                          setFormData({ ...formData, email: e.target.value });
+                          if (errors.email) {
+                            setErrors({ ...errors, email: '' });
+                          }
+                        }}
+                        placeholder="연락받으실 이메일 주소"
+                        className={`w-full rounded-xl border bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all ${
+                          errors.email
+                            ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
+                            : 'border-neutral-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20'
+                        }`}
+                      />
+                      {errors.email && (
+                        <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1 font-medium">
+                          <AlertCircle size={11} /> {errors.email}
                         </p>
                       )}
                     </div>
@@ -1165,11 +1244,11 @@ ${formData.additionalNotes || '없음'}
                 <div className="pt-3 sticky bottom-0 bg-[#0d0d10]/95 pb-1 backdrop-blur-md border-t border-neutral-800/80">
                   <button
                     type="submit"
-                    disabled={isSubmitting}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-[0.99] py-3.5 text-sm font-semibold text-white shadow-lg shadow-indigo-600/25 transition-all disabled:opacity-50 cursor-pointer"
+                    disabled={isSubmitting || !hasValidRequiredFields}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-[0.99] py-3.5 text-sm font-semibold text-white shadow-lg shadow-indigo-600/25 transition-all disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-indigo-600"
                   >
                     {isSubmitting ? (
-                      <span>문의 내용 취합 중...</span>
+                      <span>이메일 전송 중...</span>
                     ) : (
                       <>
                         <Sparkles size={16} />
@@ -1179,7 +1258,7 @@ ${formData.additionalNotes || '없음'}
                     )}
                   </button>
                   <p className="mt-2 text-center text-[11px] text-neutral-500">
-                    작성 완료 시 입력하신 문의 내용이 정리되어 클립보드에 자동 복사됩니다.
+                    작성한 문의 내용은 contact@staylovey.com으로 전송됩니다.
                   </p>
                 </div>
               </form>

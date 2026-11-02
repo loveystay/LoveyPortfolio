@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import { defineConfig, loadEnv, type Plugin } from 'vite';
 import { generateChatResponse } from './api/_chat';
+import { sendProjectInquiryEmail } from './api/_contact';
 
 const localChatApi = (apiKey: string | undefined, model: string | undefined): Plugin => ({
   name: 'local-gemini-chat-api',
@@ -30,10 +31,44 @@ const localChatApi = (apiKey: string | undefined, model: string | undefined): Pl
   },
 });
 
+const localContactApi = (
+  apiKey: string | undefined,
+  from: string | undefined,
+): Plugin => ({
+  name: 'local-contact-email-api',
+  configureServer(server) {
+    server.middlewares.use('/api/contact', async (request, response, next) => {
+      if (request.method !== 'POST') {
+        next();
+        return;
+      }
+
+      try {
+        const chunks: Buffer[] = [];
+        for await (const chunk of request) chunks.push(Buffer.from(chunk));
+        const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+        const result = await sendProjectInquiryEmail(body, apiKey, from);
+        response.statusCode = result.status;
+        response.setHeader('Content-Type', 'application/json; charset=utf-8');
+        response.end(JSON.stringify(result.data));
+      } catch {
+        response.statusCode = 400;
+        response.setHeader('Content-Type', 'application/json; charset=utf-8');
+        response.end(JSON.stringify({ error: 'Invalid request body' }));
+      }
+    });
+  },
+});
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
-    plugins: [react(), tailwindcss(), localChatApi(env.GEMINI_API_KEY, env.GEMINI_MODEL)],
+    plugins: [
+      react(),
+      tailwindcss(),
+      localChatApi(env.GEMINI_API_KEY, env.GEMINI_MODEL),
+      localContactApi(env.RESEND_API_KEY, env.CONTACT_EMAIL_FROM),
+    ],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
