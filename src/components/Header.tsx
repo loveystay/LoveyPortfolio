@@ -33,7 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
       id="main-header"
       className="sticky top-0 z-40 w-full border-b border-neutral-100 bg-[#fafafc]/90 backdrop-blur-md transition-all"
     >
-      <div className="relative mx-auto flex h-20 max-w-7xl items-center justify-between px-6 sm:px-10 lg:px-12">
+      <div className="mx-auto flex h-20 max-w-7xl items-center gap-0 px-6 sm:px-10 lg:gap-4 lg:px-12">
         {/* Left: Logo matching exact lowercase bold font in screenshots */}
         <div className="flex items-center gap-3">
           <button
@@ -61,7 +61,7 @@ export const Header: React.FC<HeaderProps> = ({
         <nav
           id="desktop-navigation"
           aria-label="Main Navigation"
-          className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center gap-8 lg:gap-11"
+          className="hidden lg:flex min-w-0 flex-1 items-center justify-center gap-5 xl:gap-11"
         >
           {navItems.map((item) => {
             const isActive = activeTab === item.key;
@@ -111,7 +111,7 @@ export const Header: React.FC<HeaderProps> = ({
         </nav>
 
         {/* Right Action Area: Language Selector + AI Consult + START A PROJECT */}
-        <div className="hidden md:flex items-center gap-2.5">
+        <div className="hidden lg:flex shrink-0 items-center gap-2.5">
           <LanguageSelector variant="header" />
           {onOpenAIConsultant && (
             <button
@@ -135,7 +135,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Mobile menu toggle */}
-        <div className="flex md:hidden items-center gap-1.5">
+        <div className="ml-auto flex lg:hidden items-center gap-1.5">
           <LanguageSelector variant="compact" />
           {onOpenAIConsultant && (
             <button
@@ -169,7 +169,7 @@ export const Header: React.FC<HeaderProps> = ({
       {mobileMenuOpen && (
         <div
           id="mobile-nav-drawer"
-          className="border-b border-neutral-200 bg-white px-6 py-6 md:hidden shadow-lg animate-fadeIn"
+          className="border-b border-neutral-200 bg-white px-6 py-6 lg:hidden shadow-lg animate-fadeIn"
         >
           <div className="flex flex-col space-y-4">
             <button
