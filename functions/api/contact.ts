@@ -1,4 +1,4 @@
-import { sendProjectInquiryEmail } from '../../api/_contact';
+import { sendProjectInquiryEmail } from '../../api/_contact.js';
 
 type ContactEnvironment = {
   RESEND_API_KEY?: string;
