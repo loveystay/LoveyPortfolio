@@ -87,6 +87,8 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   const [formattedSummary, setFormattedSummary] = useState('');
   const [copied, setCopied] = useState(false);
   const honeypotRef = useRef<HTMLInputElement>(null);
+  const isContactTestMode = import.meta.env.DEV ||
+    new URLSearchParams(window.location.search).get('contactTest') === '1';
 
   const hasValidRequiredFields =
     Boolean(formData.companyOrChannel.trim()) &&
@@ -229,62 +231,60 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   const generateProjectSummaryText = (): string => {
     const typeLabel =
       formData.projectType === 'youtube_long'
-        ? '(A) 영상 편집 - 유튜브 롱폼'
+        ? '영상 편집 - 유튜브 롱폼'
         : formData.projectType === 'shortform'
-        ? '(B) 영상 편집 - 숏폼 (쇼츠/릴스/틱톡)'
+        ? '영상 편집 - 숏폼'
         : formData.projectType === 'ecommerce_detail'
-        ? '(C) E-커머스 상세페이지 기획 & 디자인'
-        : '(D) 기타 프로젝트';
+        ? 'E-커머스 상세페이지 기획 & 디자인'
+        : '기타 프로젝트';
 
     let section3Details = '';
     if (formData.projectType === 'youtube_long' || formData.projectType === 'shortform') {
       section3Details = `
-• 원본 촬영본 분량: ${formData.videoRawFootage || '-'}
-• 최종 납품 희망 영상 길이: ${formData.videoTargetLength || '-'}
-• 작업 범위: ${formData.videoScope.length > 0 ? formData.videoScope.join(', ') : '미지정'}
-• 영상 자료 드라이브 URL: ${formData.videoDriveUrl?.trim() || '미입력 (협의 후 전달)'}
-• 업로드 주기 / 의뢰 건수: ${formData.videoFrequency || '단건 또는 미정'}`.trim();
+원본 촬영본 분량: ${formData.videoRawFootage || '미입력'}
+최종 납품 희망 길이: ${formData.videoTargetLength || '미입력'}
+작업 범위: ${formData.videoScope.length > 0 ? formData.videoScope.join(', ') : '미지정'}
+영상 자료 드라이브 URL: ${formData.videoDriveUrl?.trim() || '미입력 (협의 후 전달)'}
+업로드 주기 / 의뢰 건수: ${formData.videoFrequency || '단건 또는 미정'}`.trim();
     } else if (formData.projectType === 'ecommerce_detail') {
       section3Details = `
-• 제품군 및 주요 셀링 포인트 (USP):
-${formData.ecommerceUsp || '-'}
-• 제공 가능 리소스: ${formData.ecommerceResources.length > 0 ? formData.ecommerceResources.join(', ') : '없음'}
-• 상세페이지 자료 드라이브 URL: ${formData.ecommerceDriveUrl?.trim() || '이메일(contact@staylovey.com) 별도 송부 또는 미입력'}
-• 예상 작업 분량 (1080px 기준): ${formData.ecommerceWorkload || '미정'}`.trim();
+제품군 및 주요 셀링 포인트 (USP): ${formData.ecommerceUsp || '미입력'}
+제공 가능 리소스: ${formData.ecommerceResources.length > 0 ? formData.ecommerceResources.join(', ') : '없음'}
+상세페이지 자료 드라이브 URL: ${formData.ecommerceDriveUrl?.trim() || '미입력 (이메일로 별도 전달 가능)'}
+예상 작업 분량 (1080px 기준): ${formData.ecommerceWorkload || '미정'}`.trim();
     } else {
       section3Details = `
-• 문의 세부 내용:
-${formData.otherDetails || '-'}`.trim();
+프로젝트 세부 내용: ${formData.otherDetails || '미입력'}`.trim();
     }
 
-    return `[staylovey] Start a Project 프로젝트 의뢰 문의서
+    return `[프로젝트 의뢰 문의서]
 
-■ [섹션 1] 기본 정보
-• 업체/채널명: ${formData.companyOrChannel}
-• 담당자 성함 / 직함: ${formData.managerNameAndTitle}
-• 연락처: ${formData.contact}
-• 이메일: ${formData.email}
-• 브랜드 및 채널 링크: ${formData.brandUrl || '미입력'}
+[기본 정보]
+- 업체/채널명: ${formData.companyOrChannel}
+- 담당자: ${formData.managerNameAndTitle}
+- 연락처: ${formData.contact}
+- 이메일: ${formData.email}
+- 링크: ${formData.brandUrl || '미입력'}
 
-■ [섹션 2] 의뢰 프로젝트 유형
-• ${typeLabel}
+[프로젝트 유형]
+- ${typeLabel}
 
-■ [섹션 3] 작업 세부 사항
-${section3Details}
+[작업 세부 사항]
+${section3Details.split('\n').map((line) => `- ${line}`).join('\n')}
 
-■ [섹션 4] 레퍼런스 및 스타일 가이드
-• 지향하는 무드: ${formData.targetMood || '미입력'}
-• 참고 레퍼런스 링크 1: ${formData.referenceLink1 || '미입력'}
-• 참고 레퍼런스 링크 2: ${formData.referenceLink2 || '미입력'}
-• 필수 주의사항: ${formData.avoidStyles || '없음'}
+[레퍼런스 및 스타일]
+- 지향 무드: ${formData.targetMood || '미입력'}
+- 참고 링크 1: ${formData.referenceLink1 || '미입력'}
+- 참고 링크 2: ${formData.referenceLink2 || '미입력'}
+- 주의사항: ${formData.avoidStyles || '없음'}
 
-■ [섹션 5] 일정 및 예산
-• 원본(자료) 전달 가능 일자: ${formData.rawMaterialDate || '미정'}
-• 1차 시안 희망 수령일: ${formData.firstDraftDate || '협의'}
-• 최종 완료 및 납품 희망일 (필수): ${formData.finalDeliveryDate}
-• 책정 예산 범위 (필수): ${formData.budgetRange}
+[일정 및 예산]
+- 자료 전달일: ${formData.rawMaterialDate || '미정'}
+- 1차 시안일: ${formData.firstDraftDate || '협의'}
+- 최종 납품일: ${formData.finalDeliveryDate}
+- 예산 범위: ${formData.budgetRange}
 
-■ [섹션 6] 기타 요청 및 전달사항
+[기타 요청사항]
 ${formData.additionalNotes || '없음'}
 `;
   };
@@ -344,6 +344,28 @@ ${formData.additionalNotes || '없음'}
       onShowToast('클립보드에 복사되었습니다.');
       setTimeout(() => setCopied(false), 2500);
     }
+  };
+
+  const handleFillTestData = () => {
+    const deliveryDate = new Date();
+    deliveryDate.setDate(deliveryDate.getDate() + 14);
+    const localDeliveryDate = new Date(
+      deliveryDate.getTime() - deliveryDate.getTimezoneOffset() * 60_000,
+    ).toISOString().slice(0, 10);
+
+    setFormData((current) => ({
+      ...current,
+      companyOrChannel: '테스트 문의',
+      managerNameAndTitle: '테스트 담당자',
+      contact: '010-0000-0000',
+      email: 'qa@example.com',
+      projectType: 'youtube_long',
+      videoRawFootage: '테스트 원본 영상 약 1분',
+      videoTargetLength: '테스트 납품 영상 약 30초',
+      finalDeliveryDate: localDeliveryDate,
+      budgetRange: '테스트용 (실제 견적 아님)',
+    }));
+    setErrors({});
   };
 
   const handleReset = () => {
@@ -1260,6 +1282,20 @@ ${formData.additionalNotes || '없음'}
                   <p className="mt-2 text-center text-[11px] text-neutral-500">
                     작성한 문의 내용은 contact@staylovey.com으로 전송됩니다.
                   </p>
+                  {isContactTestMode && (
+                    <div className="mt-2 text-center">
+                      <button
+                        type="button"
+                        onClick={handleFillTestData}
+                        className="text-[11px] text-indigo-300 underline underline-offset-2 hover:text-indigo-200"
+                      >
+                        테스트 필수값 채우기
+                      </button>
+                      <p className="mt-1 text-[10px] text-neutral-500">
+                        채운 뒤 보내기를 누르면 실제 문의 메일이 발송됩니다.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </form>
             )}

@@ -256,6 +256,19 @@ export default function App() {
     setToastMessage(msg);
   };
 
+  const handleOpenContactModal = (): boolean => {
+    if (isHeroStatusLoading) {
+      window.alert("프로젝트 접수 상태를 확인 중입니다. 잠시 후 다시 시도해 주세요.");
+      return false;
+    }
+    if (!isHeroOpenForProjects) {
+      window.alert("현재 작업을 받고 있지 않습니다.");
+      return false;
+    }
+    setIsContactModalOpen(true);
+    return true;
+  };
+
   const handleToggleHeroStatus = async () => {
     if (!isAuthenticated || isHeroStatusLoading || isHeroStatusSaving) return;
 
@@ -335,7 +348,7 @@ export default function App() {
       <Header
         activeTab={activeTab}
         onSelectTab={handleSelectTab}
-        onOpenContactModal={() => setIsContactModalOpen(true)}
+        onOpenContactModal={handleOpenContactModal}
         onOpenAIConsultant={() => setIsAIConsultantOpen(true)}
       />
 
@@ -346,7 +359,7 @@ export default function App() {
             {/* Hero Section matching Screenshot 1 */}
             <HeroSection
               onExploreWorks={() => handleSelectTab("works")}
-              onGetInTouch={() => setIsContactModalOpen(true)}
+              onGetInTouch={handleOpenContactModal}
               isOpenForProjects={isHeroOpenForProjects}
               canToggleStatus={isAuthenticated}
               isStatusSaving={isHeroStatusLoading || isHeroStatusSaving}
@@ -363,7 +376,7 @@ export default function App() {
 
             {/* Contact / Let's create something amazing. section matching Screenshot 1 */}
             <ContactSection
-              onOpenContactModal={() => setIsContactModalOpen(true)}
+              onOpenContactModal={handleOpenContactModal}
               onShowToast={handleShowToast}
             />
           </div>
@@ -374,13 +387,13 @@ export default function App() {
             projects={currentProjects}
             onSelectProject={(project) => handleOpenProject(project, false)}
             onPlayVideo={(project) => handleOpenProject(project, true)}
-            onOpenContactModal={() => setIsContactModalOpen(true)}
+            onOpenContactModal={handleOpenContactModal}
           />
         )}
 
         {activeTab === "about" && (
           <AboutView
-            onOpenContactModal={() => setIsContactModalOpen(true)}
+            onOpenContactModal={handleOpenContactModal}
             onExploreWorks={() => handleSelectTab("works")}
           />
         )}
@@ -388,7 +401,7 @@ export default function App() {
         {activeTab === "contact" && (
           <div className="pt-8">
             <ContactSection
-              onOpenContactModal={() => setIsContactModalOpen(true)}
+              onOpenContactModal={handleOpenContactModal}
               onShowToast={handleShowToast}
             />
           </div>
@@ -521,8 +534,7 @@ export default function App() {
           handleOpenProject(project);
         }}
         onOpenStartProject={() => {
-          setIsAIConsultantOpen(false);
-          setIsContactModalOpen(true);
+          if (handleOpenContactModal()) setIsAIConsultantOpen(false);
         }}
       />
 

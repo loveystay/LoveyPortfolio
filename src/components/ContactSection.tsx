@@ -81,13 +81,15 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
             </span>
 
             <div className="mt-3 flex items-center justify-center gap-2 sm:gap-3 max-w-full">
-              <a
-                href={`mailto:${email}`}
+              <button
+                type="button"
                 id="contact-email-link"
-                className="font-display text-base sm:text-2xl md:text-3xl font-extrabold tracking-tight text-neutral-950 transition-colors hover:text-blue-600 truncate sm:overflow-visible"
+                onClick={onOpenContactModal}
+                aria-label="프로젝트 문의 작성"
+                className="font-display text-base sm:text-2xl md:text-3xl font-extrabold tracking-tight text-neutral-950 transition-colors hover:text-blue-600 truncate sm:overflow-visible cursor-pointer"
               >
                 {email}
-              </a>
+              </button>
 
               <button
                 id="copy-email-btn"
