@@ -54,7 +54,6 @@ export default function App() {
   const [isHeroOpenForProjects, setIsHeroOpenForProjects] = useState(true);
   const [isHeroStatusLoading, setIsHeroStatusLoading] = useState(isSupabaseConfigured);
   const [isHeroStatusSaving, setIsHeroStatusSaving] = useState(false);
-  const [isCaptureGuardVisible, setIsCaptureGuardVisible] = useState(false);
 
   const handleSelectTab = (tab: NavTab) => {
     const currentPath = normalizePath(window.location.pathname);
@@ -215,7 +214,7 @@ export default function App() {
     return () => window.removeEventListener("hashchange", checkSecretURL);
   }, []);
 
-  // Preserve basic copy protections for public portfolio content.
+  // Preserve basic content protections without interfering with screenshots.
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
@@ -246,50 +245,6 @@ export default function App() {
       window.removeEventListener("dragstart", handleDragStart);
     };
   }, []);
-
-  useEffect(() => {
-    if (activeTab === "admin") {
-      setIsCaptureGuardVisible(false);
-      return;
-    }
-
-    let revealTimer: number | undefined;
-    const hidePage = () => setIsCaptureGuardVisible(true);
-    const revealPage = () => {
-      if (document.visibilityState === "visible") {
-        window.clearTimeout(revealTimer);
-        setIsCaptureGuardVisible(false);
-      }
-    };
-    const handleCaptureShortcut = (event: KeyboardEvent) => {
-      const key = event.key.toLowerCase();
-      const macCaptureShortcut = event.metaKey && event.shiftKey && ["3", "4", "5"].includes(key);
-      if (event.key !== "PrintScreen" && !macCaptureShortcut) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-      hidePage();
-      window.clearTimeout(revealTimer);
-      revealTimer = window.setTimeout(revealPage, 1800);
-    };
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "hidden") hidePage();
-      else revealPage();
-    };
-
-    window.addEventListener("keydown", handleCaptureShortcut, true);
-    window.addEventListener("blur", hidePage);
-    window.addEventListener("focus", revealPage);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      window.clearTimeout(revealTimer);
-      window.removeEventListener("keydown", handleCaptureShortcut, true);
-      window.removeEventListener("blur", hidePage);
-      window.removeEventListener("focus", revealPage);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [activeTab]);
 
   const handleOpenProject = (project: Project, withVideo: boolean = false) => {
     setSelectedProject(project);
@@ -585,18 +540,6 @@ export default function App() {
 
       {/* Global Toast */}
       <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
-
-      {isCaptureGuardVisible && activeTab !== "admin" && (
-        <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-neutral-950 text-center text-white"
-          role="status"
-          aria-live="polite"
-        >
-          <p className="px-6 text-sm font-semibold tracking-wide">
-            화면 캡처 보호가 활성화되어 있습니다.
-          </p>
-        </div>
-      )}
     </div>
   );
 }
