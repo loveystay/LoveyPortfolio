@@ -1,74 +1,377 @@
-import React, { useState } from 'react';
-import { X, Send, Copy, Check, Sparkles, MessageSquare } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import {
+  X,
+  Send,
+  Copy,
+  Check,
+  Sparkles,
+  Video,
+  Film,
+  FileSpreadsheet,
+  HelpCircle,
+  Calendar,
+  DollarSign,
+  Link as LinkIcon,
+  AlertCircle,
+  ExternalLink,
+  RotateCcw,
+  Mail,
+  HardDrive,
+  Info
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ContactFormData } from '../types';
+import { ProjectType, StartProjectFormData } from '../types';
 
 interface ContactModalProps {
   isOpen: boolean;
   onClose: () => void;
   onShowToast: (message: string) => void;
+  initialData?: Partial<StartProjectFormData>;
 }
+
+const DEFAULT_FORM_DATA: StartProjectFormData = {
+  // [섹션 1] 기본 정보
+  companyOrChannel: '',
+  managerNameAndTitle: '',
+  contact: '',
+  email: '',
+  brandUrl: '',
+
+  // [섹션 2] 프로젝트 유형
+  projectType: 'youtube_long',
+
+  // [섹션 3] 작업 세부 사항
+  videoRawFootage: '',
+  videoTargetLength: '',
+  videoScope: ['컷편집', '자막', 'BGM·효과음'],
+  videoFrequency: '',
+  videoDriveUrl: '',
+
+  ecommerceUsp: '',
+  ecommerceResources: ['기획안 보유'],
+  ecommerceWorkload: '',
+  ecommerceDriveUrl: '',
+
+  otherDetails: '',
+
+  // [섹션 4] 레퍼런스
+  targetMood: '',
+  referenceLink1: '',
+  referenceLink2: '',
+  avoidStyles: '',
+
+  // [섹션 5] 일정 및 예산
+  rawMaterialDate: '',
+  firstDraftDate: '',
+  finalDeliveryDate: '',
+  budgetRange: '',
+
+  // [섹션 6] 기타
+  additionalNotes: '',
+};
 
 export const ContactModal: React.FC<ContactModalProps> = ({
   isOpen,
   onClose,
   onShowToast,
+  initialData,
 }) => {
-  const [formData, setFormData] = useState<ContactFormData>({
-    name: '',
-    email: '',
-    projectType: '유튜브 롱폼 영상 편집',
-    budget: '50만 원 ~ 100만 원',
-    timeline: '2~3주 이내',
-    message: '',
-  });
+  const [formData, setFormData] = useState<StartProjectFormData>(() => ({
+    ...DEFAULT_FORM_DATA,
+    ...initialData,
+  }));
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [formattedSummary, setFormattedSummary] = useState('');
   const [copied, setCopied] = useState(false);
+  const honeypotRef = useRef<HTMLInputElement>(null);
+  const isContactTestMode = import.meta.env.DEV ||
+    new URLSearchParams(window.location.search).get('contactTest') === '1';
 
-  const email = 'contact@staylovey.com';
+  const hasValidRequiredFields =
+    Boolean(formData.companyOrChannel.trim()) &&
+    Boolean(formData.managerNameAndTitle.trim()) &&
+    Boolean(formData.contact.trim()) &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim()) &&
+    Boolean(formData.finalDeliveryDate.trim()) &&
+    Boolean(formData.budgetRange.trim()) &&
+    (formData.projectType === 'youtube_long' || formData.projectType === 'shortform'
+      ? Boolean(formData.videoRawFootage?.trim()) && Boolean(formData.videoTargetLength?.trim())
+      : formData.projectType === 'ecommerce_detail'
+      ? Boolean(formData.ecommerceUsp?.trim())
+      : formData.projectType === 'other'
+      ? Boolean(formData.otherDetails?.trim())
+      : false);
 
-  const handleCopyEmail = async () => {
+  const targetEmail = 'contact@staylovey.com';
+
+  const projectTypeOptions: {
+    type: ProjectType;
+    label: string;
+    icon: React.ReactNode;
+  }[] = [
+    {
+      type: 'youtube_long',
+      label: '유튜브 롱폼',
+      icon: <Video size={18} />,
+    },
+    {
+      type: 'shortform',
+      label: '숏폼 (쇼츠/릴스/틱톡)',
+      icon: <Film size={18} />,
+    },
+    {
+      type: 'ecommerce_detail',
+      label: '상세페이지 기획 & 디자인',
+      icon: <FileSpreadsheet size={18} />,
+    },
+    {
+      type: 'other',
+      label: '기타 프로젝트',
+      icon: <HelpCircle size={18} />,
+    },
+  ];
+
+  const videoScopeOptions = [
+    '컷편집',
+    '자막',
+    '모션·CG',
+    'BGM·효과음',
+    '썸네일 포함 여부',
+  ];
+
+  const ecommerceResourceOptions = [
+    '기획안 보유',
+    '제품 연출컷·누끼컷 보유',
+    '원고/텍스트 보유',
+  ];
+
+  const handleScopeToggle = (item: string) => {
+    setFormData((prev) => {
+      const exists = prev.videoScope.includes(item);
+      const updated = exists
+        ? prev.videoScope.filter((s) => s !== item)
+        : [...prev.videoScope, item];
+      return { ...prev, videoScope: updated };
+    });
+  };
+
+  const handleResourceToggle = (item: string) => {
+    setFormData((prev) => {
+      const exists = prev.ecommerceResources.includes(item);
+      const updated = exists
+        ? prev.ecommerceResources.filter((r) => r !== item)
+        : [...prev.ecommerceResources, item];
+      return { ...prev, ecommerceResources: updated };
+    });
+  };
+
+  const validate = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    // [섹션 1] 필수 검증
+    if (!formData.companyOrChannel.trim()) {
+      newErrors.companyOrChannel = '업체/채널명을 입력해 주세요.';
+    }
+    if (!formData.managerNameAndTitle.trim()) {
+      newErrors.managerNameAndTitle = '담당자 성함 및 직함을 입력해 주세요.';
+    }
+    if (!formData.contact.trim()) {
+      newErrors.contact = '연락처를 입력해 주세요.';
+    }
+    if (!formData.email.trim()) {
+      newErrors.email = '이메일을 입력해 주세요.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      newErrors.email = '올바른 이메일 주소를 입력해 주세요.';
+    }
+
+    // [섹션 3] 조건부 필수 검증
+    if (formData.projectType === 'youtube_long' || formData.projectType === 'shortform') {
+      if (!formData.videoRawFootage?.trim()) {
+        newErrors.videoRawFootage = '원본 촬영본 분량(러닝타임 또는 용량)을 입력해 주세요.';
+      }
+      if (!formData.videoTargetLength?.trim()) {
+        newErrors.videoTargetLength = '최종 납품 희망 영상 길이를 입력해 주세요.';
+      }
+    } else if (formData.projectType === 'ecommerce_detail') {
+      if (!formData.ecommerceUsp?.trim()) {
+        newErrors.ecommerceUsp = '제품군 및 주요 셀링 포인트(USP)를 작성해 주세요.';
+      }
+    } else if (formData.projectType === 'other') {
+      if (!formData.otherDetails?.trim()) {
+        newErrors.otherDetails = '문의 세부 내용을 직접 입력해 주세요.';
+      }
+    }
+
+    // [섹션 5] 필수 검증
+    if (!formData.finalDeliveryDate.trim()) {
+      newErrors.finalDeliveryDate = '최종 완료 및 납품 희망일을 입력해 주세요.';
+    }
+    if (!formData.budgetRange.trim()) {
+      newErrors.budgetRange = '희망하시는 금액을 입력해 주세요.';
+    }
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      onShowToast('필수 입력 항목을 확인해 주세요.');
+      const firstErrorKey = Object.keys(newErrors)[0];
+      const element = document.getElementById(`field-${firstErrorKey}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return false;
+    }
+
+    return true;
+  };
+
+  const generateProjectSummaryText = (): string => {
+    const typeLabel =
+      formData.projectType === 'youtube_long'
+        ? '영상 편집 - 유튜브 롱폼'
+        : formData.projectType === 'shortform'
+        ? '영상 편집 - 숏폼'
+        : formData.projectType === 'ecommerce_detail'
+        ? 'E-커머스 상세페이지 기획 & 디자인'
+        : '기타 프로젝트';
+
+    let section3Details = '';
+    if (formData.projectType === 'youtube_long' || formData.projectType === 'shortform') {
+      section3Details = `
+원본 촬영본 분량: ${formData.videoRawFootage || '미입력'}
+최종 납품 희망 길이: ${formData.videoTargetLength || '미입력'}
+작업 범위: ${formData.videoScope.length > 0 ? formData.videoScope.join(', ') : '미지정'}
+영상 자료 드라이브 URL: ${formData.videoDriveUrl?.trim() || '미입력 (협의 후 전달)'}
+업로드 주기 / 의뢰 건수: ${formData.videoFrequency || '단건 또는 미정'}`.trim();
+    } else if (formData.projectType === 'ecommerce_detail') {
+      section3Details = `
+제품군 및 주요 셀링 포인트 (USP): ${formData.ecommerceUsp || '미입력'}
+제공 가능 리소스: ${formData.ecommerceResources.length > 0 ? formData.ecommerceResources.join(', ') : '없음'}
+상세페이지 자료 드라이브 URL: ${formData.ecommerceDriveUrl?.trim() || '미입력 (이메일로 별도 전달 가능)'}
+예상 작업 분량 (1080px 기준): ${formData.ecommerceWorkload || '미정'}`.trim();
+    } else {
+      section3Details = `
+프로젝트 세부 내용: ${formData.otherDetails || '미입력'}`.trim();
+    }
+
+    return `[프로젝트 의뢰 문의서]
+
+[기본 정보]
+- 업체/채널명: ${formData.companyOrChannel}
+- 담당자: ${formData.managerNameAndTitle}
+- 연락처: ${formData.contact}
+- 이메일: ${formData.email}
+- 링크: ${formData.brandUrl || '미입력'}
+
+[프로젝트 유형]
+- ${typeLabel}
+
+[작업 세부 사항]
+${section3Details.split('\n').map((line) => `- ${line}`).join('\n')}
+
+[레퍼런스 및 스타일]
+- 지향 무드: ${formData.targetMood || '미입력'}
+- 참고 링크 1: ${formData.referenceLink1 || '미입력'}
+- 참고 링크 2: ${formData.referenceLink2 || '미입력'}
+- 주의사항: ${formData.avoidStyles || '없음'}
+
+[일정 및 예산]
+- 자료 전달일: ${formData.rawMaterialDate || '미정'}
+- 1차 시안일: ${formData.firstDraftDate || '협의'}
+- 최종 납품일: ${formData.finalDeliveryDate}
+- 예산 범위: ${formData.budgetRange}
+
+[기타 요청사항]
+${formData.additionalNotes || '없음'}
+`;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+
+    setIsSubmitting(true);
+    const summary = generateProjectSummaryText();
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          summary,
+          email: formData.email,
+          companyOrChannel: formData.companyOrChannel,
+          website: honeypotRef.current?.value ?? '',
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (response.status === 503) {
+        throw new Error('메일 발송 설정이 완료되지 않았습니다. 관리자에게 문의해 주세요.');
+      }
+      if (!response.headers.get('content-type')?.includes('application/json')) {
+        throw new Error('메일 발송 API를 찾을 수 없습니다. 배포 설정을 확인해 주세요.');
+      }
+      if (!response.ok || result?.ok !== true) {
+        throw new Error('메일 전송에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+      }
+
+      setFormattedSummary(summary);
+      setIsSubmitted(true);
+      onShowToast('프로젝트 문의가 이메일로 전송되었습니다.');
+    } catch (error) {
+      onShowToast(
+        error instanceof Error
+          ? error.message
+          : '문의 전송에 실패했습니다. 잠시 후 다시 시도해 주세요.',
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCopySummary = async () => {
     try {
       if (navigator.clipboard) {
-        await navigator.clipboard.writeText(email);
+        await navigator.clipboard.writeText(formattedSummary);
       }
       setCopied(true);
-      onShowToast('이메일 주소가 클립보드에 복사되었습니다.');
+      onShowToast('문의 내용이 클립보드에 복사되었습니다.');
       setTimeout(() => setCopied(false), 2500);
     } catch {
       setCopied(true);
-      onShowToast('이메일 주소가 클립보드에 복사되었습니다.');
+      onShowToast('클립보드에 복사되었습니다.');
       setTimeout(() => setCopied(false), 2500);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name || !formData.email) {
-      alert('성함과 연락 가능한 이메일을 입력해 주세요.');
-      return;
-    }
+  const handleFillTestData = () => {
+    const deliveryDate = new Date();
+    deliveryDate.setDate(deliveryDate.getDate() + 14);
+    const localDeliveryDate = new Date(
+      deliveryDate.getTime() - deliveryDate.getTimezoneOffset() * 60_000,
+    ).toISOString().slice(0, 10);
 
-    setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setIsSubmitted(true);
-      onShowToast(`문의가 정상적으로 접수되었습니다. 감사합니다, ${formData.name}님.`);
-    }, 900);
+    setFormData((current) => ({
+      ...current,
+      companyOrChannel: '테스트 문의',
+      managerNameAndTitle: '테스트 담당자',
+      contact: '010-0000-0000',
+      email: 'qa@example.com',
+      projectType: 'youtube_long',
+      videoRawFootage: '테스트 원본 영상 약 1분',
+      videoTargetLength: '테스트 납품 영상 약 30초',
+      finalDeliveryDate: localDeliveryDate,
+      budgetRange: '테스트용 (실제 견적 아님)',
+    }));
+    setErrors({});
   };
 
   const handleReset = () => {
     setIsSubmitted(false);
-    setFormData({
-      name: '',
-      email: '',
-      projectType: '유튜브 롱폼 영상 편집',
-      budget: '50만 원 ~ 100만 원',
-      timeline: '2~3주 이내',
-      message: '',
-    });
+    setFormData(DEFAULT_FORM_DATA);
+    setErrors({});
     onClose();
   };
 
@@ -76,197 +379,927 @@ export const ContactModal: React.FC<ContactModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 md:p-6 overflow-hidden">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="fixed inset-0 bg-neutral-950/70 backdrop-blur-md"
+          className="fixed inset-0 bg-black/85 backdrop-blur-md"
         />
 
-        {/* Modal Content */}
+        {/* Modal Window */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 15 }}
+          initial={{ opacity: 0, scale: 0.98, y: 12 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="relative z-10 w-full max-w-2xl overflow-hidden rounded-3xl bg-white p-6 sm:p-10 shadow-2xl border border-neutral-200"
+          exit={{ opacity: 0, scale: 0.98, y: 12 }}
+          transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+          className="relative z-10 flex flex-col h-[94vh] max-h-[920px] w-full max-w-2xl overflow-hidden rounded-2xl bg-[#0d0d10] border border-neutral-800 text-neutral-100 shadow-2xl shadow-black/80"
         >
-          {/* Close button */}
-          <button
-            onClick={onClose}
-            className="absolute top-6 right-6 flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200 hover:text-neutral-950 transition cursor-pointer"
-            aria-label="닫기"
-          >
-            <X size={18} />
-          </button>
-
-          {isSubmitted ? (
-            <div className="py-12 text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-6">
-                <Check size={32} />
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-neutral-800/80 bg-[#121216] px-5 sm:px-7 py-4.5 shrink-0">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-2 w-2 rounded-full bg-emerald-400 ring-4 ring-emerald-500/20" />
+                <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">
+                  Start a Project
+                </h2>
               </div>
-              <h3 className="font-display text-3xl font-black text-neutral-950">
-                문의가 접수되었습니다
-              </h3>
-              <p className="mt-3 text-sm text-neutral-600 max-w-md mx-auto leading-relaxed">
-                감사합니다, <strong className="text-neutral-900">{formData.name}</strong>님. 남겨주신 프로젝트 내용을 확인한 후 24시간 이내에 빠른 회신을 드리겠습니다.
+              <p className="text-xs text-neutral-400 leading-normal">
+                준비 중이신 프로젝트에 대해 편하게 남겨주세요. 꼼꼼히 확인 후 회신드립니다.
               </p>
-              <div className="mt-8">
-                <button
-                  onClick={handleReset}
-                  className="rounded-full bg-blue-600 px-8 py-3 text-xs font-bold text-white uppercase tracking-wider hover:bg-blue-700 transition cursor-pointer"
-                >
-                  확인
-                </button>
-              </div>
             </div>
-          ) : (
-            <div>
-              <div className="flex items-center gap-2 text-xs font-mono-tag font-bold tracking-widest text-blue-600 uppercase">
-                <Sparkles size={14} /> PROJECT INQUIRY
-              </div>
-              <h2 className="mt-2 font-display text-2xl sm:text-3xl font-black text-neutral-950">
-                작업 문의 및 견적 상담
-              </h2>
-              <p className="mt-2 text-xs sm:text-sm text-neutral-500">
-                준비 중이신 영상 편집이나 상세페이지 디자인에 대해 편하게 남겨주세요.
-              </p>
 
-              {/* Direct email pill */}
-              <div className="mt-4 flex items-center justify-between rounded-xl bg-neutral-50 p-3 border border-neutral-200/80">
-                <div className="text-xs text-neutral-600">
-                  직접 이메일 문의:{' '}
-                  <a href={`mailto:${email}`} className="font-bold text-neutral-900 hover:underline">
-                    {email}
-                  </a>
-                </div>
-                <button
-                  onClick={handleCopyEmail}
-                  className="flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-700 bg-white px-3 py-1 rounded-lg border border-neutral-200 shadow-2xs cursor-pointer"
-                >
-                  {copied ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
-                  {copied ? '복사완료' : '이메일 복사'}
-                </button>
-              </div>
+            <button
+              onClick={onClose}
+              className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-800/80 text-neutral-400 hover:bg-neutral-700 hover:text-white transition cursor-pointer shrink-0 ml-3"
+              aria-label="닫기"
+            >
+              <X size={16} />
+            </button>
+          </div>
 
-              {/* Form */}
-              <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                      성함 또는 브랜드/채널명 *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="예: 홍길동 / 브랜드명"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 text-sm focus:border-blue-600 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                      회신받으실 이메일 주소 *
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="예: example@naver.com"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 text-sm focus:border-blue-600 focus:outline-none"
-                    />
-                  </div>
+          {/* Body Content */}
+          <div className="flex-1 overflow-y-auto px-5 sm:px-7 py-6 space-y-6 custom-scrollbar bg-[#0d0d10]">
+            {isSubmitted ? (
+              /* Success / Completed View */
+              <div className="py-8 sm:py-12 text-center max-w-lg mx-auto space-y-6">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shadow-sm">
+                  <Check size={28} />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                      작업 유형
-                    </label>
-                    <select
-                      value={formData.projectType}
-                      onChange={(e) => setFormData({ ...formData, projectType: e.target.value })}
-                      className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-xs font-medium focus:border-blue-600 focus:outline-none"
-                    >
-                      <option>유튜브 롱폼 영상 편집</option>
-                      <option>이커머스 상세페이지 제작</option>
-                      <option>유튜브 숏폼 / 릴스 편집</option>
-                      <option>정기 협업 및 다건 의뢰</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                      희망 예산 (KRW)
-                    </label>
-                    <select
-                      value={formData.budget}
-                      onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
-                      className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-xs font-medium focus:border-blue-600 focus:outline-none"
-                    >
-                      <option>10만 원 ~ 30만 원 미만</option>
-                      <option>30만 원 ~ 50만 원</option>
-                      <option>50만 원 ~ 100만 원</option>
-                      <option>100만 원 ~ 200만 원</option>
-                      <option>200만 원 이상 / 정기 협업</option>
-                      <option>상담 후 협의</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                      희망 일정
-                    </label>
-                    <select
-                      value={formData.timeline}
-                      onChange={(e) => setFormData({ ...formData, timeline: e.target.value })}
-                      className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-xs font-medium focus:border-blue-600 focus:outline-none"
-                    >
-                      <option>급행 (3일 이내)</option>
-                      <option>1주일 이내</option>
-                      <option>2~3주 이내</option>
-                      <option>일정 조율 가능</option>
-                    </select>
-                  </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+                    프로젝트 문의 작성이 완료되었습니다
+                  </h3>
+                  <p className="text-xs sm:text-sm text-neutral-400 leading-relaxed break-keep">
+                    작성해주신 프로젝트 문의를
+                    <strong className="text-neutral-200"> {targetEmail}</strong>으로 전송했습니다.
+                    확인 후 입력하신 이메일로 회신드리겠습니다.
+                  </p>
                 </div>
 
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                    프로젝트 내용 및 요청사항
-                  </label>
-                  <textarea
-                    rows={3}
-                    placeholder="작업 분량, 참고할 레퍼런스 영상/링크, 전달해주실 소스 내용 등을 간단히 적어주세요."
-                    value={formData.message}
-                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 text-sm focus:border-blue-600 focus:outline-none resize-none"
-                  />
+                {/* Direct Mail Info Box */}
+                <div className="rounded-xl border border-neutral-800 bg-[#141418] p-4.5 text-left space-y-3.5">
+                  <div className="flex items-center justify-between text-xs text-neutral-400 pb-2 border-b border-neutral-800">
+                    <span>수신 메일 주소</span>
+                    <strong className="text-white font-mono">{targetEmail}</strong>
+                  </div>
+
+                  <div className="pt-1">
+                    <button
+                      onClick={handleCopySummary}
+                      className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-medium text-xs transition cursor-pointer border border-neutral-700"
+                    >
+                      {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+                      {copied ? '복사 완료' : '문의 내용 복사'}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="pt-2">
                   <button
+                    onClick={handleReset}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 px-6 py-2.5 text-xs font-semibold text-neutral-200 transition cursor-pointer border border-neutral-700"
+                  >
+                    <RotateCcw size={13} />
+                    확인 및 창 닫기
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Clean Form */
+              <form onSubmit={handleSubmit} noValidate className="space-y-5">
+                <div
+                  aria-hidden="true"
+                  className="absolute -left-[10000px] top-auto h-px w-px overflow-hidden"
+                >
+                  <label htmlFor="contact-website">Leave this field empty</label>
+                  <input
+                    ref={honeypotRef}
+                    id="contact-website"
+                    name="website"
+                    type="text"
+                    tabIndex={-1}
+                    autoComplete="off"
+                  />
+                </div>
+                {/* [섹션 1] 기본 정보 */}
+                <section className="rounded-2xl border border-neutral-800/90 bg-[#121217] p-5 sm:p-6 space-y-4 shadow-sm hover:border-neutral-700/80 transition-colors">
+                  <div className="flex items-center justify-between pb-3 border-b border-neutral-800/80">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-indigo-500/10 border border-indigo-500/20 text-[11px] font-mono font-bold text-indigo-400">
+                        01
+                      </span>
+                      <h3 className="text-sm sm:text-base font-semibold text-white tracking-tight">
+                        기본 정보
+                      </h3>
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-rose-300 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-full">
+                      <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
+                      필수 입력
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* 업체/채널명 */}
+                    <div id="field-companyOrChannel" className="space-y-1.5">
+                      <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                        <span className="flex items-center gap-1.5">
+                          업체 / 채널명
+                          <span className="text-rose-400 text-xs font-bold" title="필수">*</span>
+                        </span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.companyOrChannel}
+                        onChange={(e) => {
+                          setFormData({ ...formData, companyOrChannel: e.target.value });
+                          if (errors.companyOrChannel) {
+                            setErrors({ ...errors, companyOrChannel: '' });
+                          }
+                        }}
+                        placeholder="staylovey (또는 업체 / 채널명)"
+                        className={`w-full rounded-xl border bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all ${
+                          errors.companyOrChannel
+                            ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
+                            : 'border-neutral-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20'
+                        }`}
+                      />
+                      {errors.companyOrChannel && (
+                        <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1 font-medium">
+                          <AlertCircle size={11} /> {errors.companyOrChannel}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 담당자 성함 / 직함 */}
+                    <div id="field-managerNameAndTitle" className="space-y-1.5">
+                      <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                        <span className="flex items-center gap-1.5">
+                          담당자 성함 및 직함
+                          <span className="text-rose-400 text-xs font-bold" title="필수">*</span>
+                        </span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.managerNameAndTitle}
+                        onChange={(e) => {
+                          setFormData({ ...formData, managerNameAndTitle: e.target.value });
+                          if (errors.managerNameAndTitle) {
+                            setErrors({ ...errors, managerNameAndTitle: '' });
+                          }
+                        }}
+                        placeholder="담당자 성함 및 직함"
+                        className={`w-full rounded-xl border bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all ${
+                          errors.managerNameAndTitle
+                            ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
+                            : 'border-neutral-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20'
+                        }`}
+                      />
+                      {errors.managerNameAndTitle && (
+                        <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1 font-medium">
+                          <AlertCircle size={11} /> {errors.managerNameAndTitle}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 연락처 */}
+                    <div id="field-contact" className="space-y-1.5">
+                      <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                        <span className="flex items-center gap-1.5">
+                          연락처
+                          <span className="text-rose-400 text-xs font-bold" title="필수">*</span>
+                        </span>
+                      </label>
+                      <input
+                        type="tel"
+                        autoComplete="tel"
+                        value={formData.contact}
+                        onChange={(e) => {
+                          setFormData({ ...formData, contact: e.target.value });
+                          if (errors.contact) {
+                            setErrors({ ...errors, contact: '' });
+                          }
+                        }}
+                        placeholder="연락받으실 연락처를 입력해 주세요"
+                        className={`w-full rounded-xl border bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all ${
+                          errors.contact
+                            ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
+                            : 'border-neutral-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20'
+                        }`}
+                      />
+                      {errors.contact && (
+                        <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1 font-medium">
+                          <AlertCircle size={11} /> {errors.contact}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 이메일 */}
+                    <div id="field-email" className="space-y-1.5">
+                      <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                        <span className="flex items-center gap-1.5">
+                          이메일
+                          <span className="text-rose-400 text-xs font-bold" title="필수">*</span>
+                        </span>
+                      </label>
+                      <input
+                        type="email"
+                        inputMode="email"
+                        autoComplete="email"
+                        value={formData.email}
+                        onChange={(e) => {
+                          setFormData({ ...formData, email: e.target.value });
+                          if (errors.email) {
+                            setErrors({ ...errors, email: '' });
+                          }
+                        }}
+                        placeholder="연락받으실 이메일 주소"
+                        className={`w-full rounded-xl border bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all ${
+                          errors.email
+                            ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
+                            : 'border-neutral-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20'
+                        }`}
+                      />
+                      {errors.email && (
+                        <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1 font-medium">
+                          <AlertCircle size={11} /> {errors.email}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 브랜드 및 채널 링크 */}
+                    <div className="space-y-1.5">
+                      <label className="flex items-center justify-between text-xs font-medium text-neutral-300">
+                        <span className="flex items-center gap-1.5">브랜드 및 채널 링크</span>
+                        <span className="text-[10px] text-neutral-500 font-normal bg-neutral-800/80 px-1.5 py-0.5 rounded">선택</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.brandUrl}
+                        onChange={(e) => setFormData({ ...formData, brandUrl: e.target.value })}
+                        placeholder="브랜드 채널 또는 웹사이트 링크 (선택)"
+                        className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+                </section>
+
+                {/* [섹션 2] 의뢰 프로젝트 유형 */}
+                <section className="rounded-2xl border border-neutral-800/90 bg-[#121217] p-5 sm:p-6 space-y-4 shadow-sm hover:border-neutral-700/80 transition-colors">
+                  <div className="flex items-center justify-between pb-3 border-b border-neutral-800/80">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-indigo-500/10 border border-indigo-500/20 text-[11px] font-mono font-bold text-indigo-400">
+                        02
+                      </span>
+                      <h3 className="text-sm sm:text-base font-semibold text-white tracking-tight">
+                        의뢰 프로젝트 유형
+                      </h3>
+                    </div>
+                    <span className="text-[11px] text-neutral-400">
+                      선택 시 세부 항목이 자동 구성됩니다
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {projectTypeOptions.map((opt) => {
+                      const isSelected = formData.projectType === opt.type;
+                      return (
+                        <button
+                          key={opt.type}
+                          type="button"
+                          onClick={() => {
+                            setFormData((prev) => ({ ...prev, projectType: opt.type }));
+                            setErrors((prev) => {
+                              const updated = { ...prev };
+                              delete updated.videoRawFootage;
+                              delete updated.videoTargetLength;
+                              delete updated.ecommerceUsp;
+                              delete updated.otherDetails;
+                              return updated;
+                            });
+                          }}
+                          className={`flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                            isSelected
+                              ? 'border-indigo-500 bg-indigo-500/[0.08] text-white ring-1 ring-indigo-500/25 shadow-sm shadow-indigo-500/5'
+                              : 'border-neutral-800 bg-[#0b0b0e] text-neutral-300 hover:border-neutral-700 hover:bg-neutral-800/40'
+                          }`}
+                        >
+                          <div
+                            className={`p-2 rounded-lg shrink-0 transition-colors ${
+                              isSelected
+                                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30'
+                                : 'bg-neutral-800/80 text-neutral-400'
+                            }`}
+                          >
+                            {opt.icon}
+                          </div>
+                          <div className="flex-1 min-w-0 flex items-center justify-between">
+                            <span className="text-xs sm:text-sm font-semibold truncate text-white">
+                              {opt.label}
+                            </span>
+                            <span
+                              className={`h-4 w-4 rounded-full border flex items-center justify-center shrink-0 ml-1.5 transition-all ${
+                                isSelected
+                                  ? 'border-indigo-500 bg-indigo-600 text-white'
+                                  : 'border-neutral-700 bg-neutral-900'
+                              }`}
+                            >
+                              {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                {/* [섹션 3] 작업 세부 사항 (조건부 전환) */}
+                <section className="rounded-2xl border border-neutral-800/90 bg-[#121217] p-5 sm:p-6 space-y-4 shadow-sm hover:border-neutral-700/80 transition-colors">
+                  <div className="flex items-center justify-between pb-3 border-b border-neutral-800/80">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-indigo-500/10 border border-indigo-500/20 text-[11px] font-mono font-bold text-indigo-400">
+                        03
+                      </span>
+                      <h3 className="text-sm sm:text-base font-semibold text-white tracking-tight">
+                        작업 세부 사항
+                      </h3>
+                    </div>
+                    <span className="text-xs text-indigo-400 font-medium px-2 py-0.5 rounded-md bg-indigo-500/10 border border-indigo-500/20">
+                      {formData.projectType === 'youtube_long' && '유튜브 롱폼'}
+                      {formData.projectType === 'shortform' && '숏폼 영상'}
+                      {formData.projectType === 'ecommerce_detail' && '상세페이지'}
+                      {formData.projectType === 'other' && '기타 문의'}
+                    </span>
+                  </div>
+
+                  {/* CASE 1: 유튜브 롱폼 또는 숏폼 */}
+                  {(formData.projectType === 'youtube_long' ||
+                    formData.projectType === 'shortform') && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* 원본 촬영본 분량 */}
+                        <div id="field-videoRawFootage" className="space-y-1.5">
+                          <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                            <span className="flex items-center gap-1.5">
+                              원본 촬영본 분량 (총 러닝타임 / 용량)
+                              <span className="text-rose-400 text-xs font-bold" title="필수">*</span>
+                            </span>
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.videoRawFootage}
+                            onChange={(e) => {
+                              setFormData({ ...formData, videoRawFootage: e.target.value });
+                              if (errors.videoRawFootage) {
+                                setErrors({ ...errors, videoRawFootage: '' });
+                              }
+                            }}
+                            placeholder="원본 촬영본 분량 (러닝타임 또는 용량)"
+                            className={`w-full rounded-xl border bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all ${
+                              errors.videoRawFootage
+                                ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
+                                : 'border-neutral-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20'
+                            }`}
+                          />
+                          {errors.videoRawFootage && (
+                            <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1 font-medium">
+                              <AlertCircle size={11} /> {errors.videoRawFootage}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* 최종 납품 희망 영상 길이 */}
+                        <div id="field-videoTargetLength" className="space-y-1.5">
+                          <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                            <span className="flex items-center gap-1.5">
+                              최종 납품 희망 영상 길이
+                              <span className="text-rose-400 text-xs font-bold" title="필수">*</span>
+                            </span>
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.videoTargetLength}
+                            onChange={(e) => {
+                              setFormData({ ...formData, videoTargetLength: e.target.value });
+                              if (errors.videoTargetLength) {
+                                setErrors({ ...errors, videoTargetLength: '' });
+                              }
+                            }}
+                            placeholder="최종 납품 희망 영상 길이"
+                            className={`w-full rounded-xl border bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all ${
+                              errors.videoTargetLength
+                                ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
+                                : 'border-neutral-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20'
+                            }`}
+                          />
+                          {errors.videoTargetLength && (
+                            <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1 font-medium">
+                              <AlertCircle size={11} /> {errors.videoTargetLength}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 영상 자료 드라이브 URL */}
+                      <div className="space-y-1.5 rounded-xl border border-neutral-800/70 bg-[#0b0b0e] p-3.5">
+                        <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                          <span className="flex items-center gap-1.5">
+                            <HardDrive size={13} className="text-indigo-400" />
+                            영상 자료 / 원본 드라이브 URL
+                          </span>
+                          <span className="text-[10px] text-neutral-500 font-normal bg-neutral-800/80 px-1.5 py-0.5 rounded">선택</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.videoDriveUrl || ''}
+                          onChange={(e) => setFormData({ ...formData, videoDriveUrl: e.target.value })}
+                          placeholder="공유 드라이브 링크 (구글 드라이브, Dropbox 등)"
+                          className="w-full rounded-lg border border-neutral-800 bg-[#121217] px-3.5 py-2 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                        />
+                        <p className="text-[11px] text-neutral-400 leading-relaxed pt-0.5">
+                          촬영 원본 또는 대본 파일이 담긴 드라이브 링크를 남겨주시면 더 빠르고 정확한 견적 검토가 가능합니다.
+                        </p>
+                      </div>
+
+                      {/* 작업 범위 */}
+                      <div className="space-y-2 pt-1">
+                        <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                          <span>작업 범위 (중복 선택)</span>
+                          <span className="text-[10px] text-neutral-500 font-normal">다중 선택 가능</span>
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {videoScopeOptions.map((item) => {
+                            const isChecked = formData.videoScope.includes(item);
+                            return (
+                              <button
+                                key={item}
+                                type="button"
+                                onClick={() => handleScopeToggle(item)}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
+                                  isChecked
+                                    ? 'border-indigo-500 bg-indigo-500/15 text-indigo-300 shadow-sm'
+                                    : 'border-neutral-800 bg-[#0b0b0e] text-neutral-400 hover:border-neutral-700 hover:text-neutral-200'
+                                }`}
+                              >
+                                <span
+                                  className={`h-3.5 w-3.5 rounded flex items-center justify-center text-[10px] transition-colors ${
+                                    isChecked ? 'bg-indigo-600 text-white' : 'border border-neutral-700 bg-neutral-900'
+                                  }`}
+                                >
+                                  {isChecked && <Check size={10} />}
+                                </span>
+                                <span>{item}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* 업로드 주기 또는 의뢰 건수 */}
+                      <div className="space-y-1.5 pt-1">
+                        <label className="flex items-center justify-between text-xs font-medium text-neutral-300">
+                          <span>업로드 주기 또는 의뢰 건수</span>
+                          <span className="text-[10px] text-neutral-500 font-normal bg-neutral-800/80 px-1.5 py-0.5 rounded">선택</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.videoFrequency}
+                          onChange={(e) => setFormData({ ...formData, videoFrequency: e.target.value })}
+                          placeholder="단건 또는 정기 업로드 주기를 적어주세요 (선택)"
+                          className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CASE 2: E-커머스 상세페이지 기획 & 디자인 */}
+                  {formData.projectType === 'ecommerce_detail' && (
+                    <div className="space-y-4">
+                      {/* 제품군 및 셀링 포인트 */}
+                      <div id="field-ecommerceUsp" className="space-y-1.5">
+                        <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                          <span className="flex items-center gap-1.5">
+                            제품군 및 주요 셀링 포인트(USP)
+                            <span className="text-rose-400 text-xs font-bold" title="필수">*</span>
+                          </span>
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={formData.ecommerceUsp}
+                          onChange={(e) => {
+                            setFormData({ ...formData, ecommerceUsp: e.target.value });
+                            if (errors.ecommerceUsp) {
+                              setErrors({ ...errors, ecommerceUsp: '' });
+                            }
+                          }}
+                          placeholder="제품군 및 주요 셀링 포인트(USP)를 적어주세요"
+                          className={`w-full rounded-xl border bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all resize-none ${
+                            errors.ecommerceUsp
+                              ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
+                              : 'border-neutral-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20'
+                          }`}
+                        />
+                        {errors.ecommerceUsp && (
+                          <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1 font-medium">
+                            <AlertCircle size={11} /> {errors.ecommerceUsp}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* 이미지 / 리소스 전달 안내 배너 */}
+                      <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/[0.04] p-3.5 space-y-1.5">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-indigo-300">
+                          <Mail size={13} className="text-indigo-400" />
+                          <span>상세페이지 이미지 및 기획 자료 전달 안내</span>
+                        </div>
+                        <p className="text-[11px] text-neutral-400 leading-relaxed">
+                          대용량 파일(고해상도 제품컷, 누끼컷, 원고, PSD 등)은 파일 용량 관계로 문의 전송 후
+                          <strong className="text-indigo-300 font-medium"> contact@staylovey.com </strong>
+                          으로 별도 첨부하여 송부해 주시거나, 아래 클라우드 링크로 공유해 주시면 원활히 검토됩니다.
+                        </p>
+                      </div>
+
+                      {/* 자료 드라이브 링크 입력 필드 */}
+                      <div className="space-y-1.5 rounded-xl border border-neutral-800/70 bg-[#0b0b0e] p-3.5">
+                        <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                          <span className="flex items-center gap-1.5">
+                            <HardDrive size={13} className="text-indigo-400" />
+                            상세페이지 자료 드라이브 URL
+                          </span>
+                          <span className="text-[10px] text-neutral-500 font-normal bg-neutral-800/80 px-1.5 py-0.5 rounded">선택</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.ecommerceDriveUrl || ''}
+                          onChange={(e) => setFormData({ ...formData, ecommerceDriveUrl: e.target.value })}
+                          placeholder="공유 드라이브 링크 (구글 드라이브, Dropbox 등)"
+                          className="w-full rounded-lg border border-neutral-800 bg-[#121217] px-3.5 py-2 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                        />
+                      </div>
+
+                      {/* 제공 가능 리소스 */}
+                      <div className="space-y-2 pt-1">
+                        <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                          <span>제공 가능 리소스 (중복 선택)</span>
+                          <span className="text-[10px] text-neutral-500 font-normal">다중 선택 가능</span>
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {ecommerceResourceOptions.map((item) => {
+                            const isChecked = formData.ecommerceResources.includes(item);
+                            return (
+                              <button
+                                key={item}
+                                type="button"
+                                onClick={() => handleResourceToggle(item)}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
+                                  isChecked
+                                    ? 'border-indigo-500 bg-indigo-500/15 text-indigo-300 shadow-sm'
+                                    : 'border-neutral-800 bg-[#0b0b0e] text-neutral-400 hover:border-neutral-700 hover:text-neutral-200'
+                                }`}
+                              >
+                                <span
+                                  className={`h-3.5 w-3.5 rounded flex items-center justify-center text-[10px] transition-colors ${
+                                    isChecked ? 'bg-indigo-600 text-white' : 'border border-neutral-700 bg-neutral-900'
+                                  }`}
+                                >
+                                  {isChecked && <Check size={10} />}
+                                </span>
+                                <span>{item}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* 예상 작업 분량 */}
+                      <div className="space-y-1.5 pt-1">
+                        <label className="flex items-center justify-between text-xs font-medium text-neutral-300">
+                          <span>예상 작업 분량 (1080px 기준)</span>
+                          <span className="text-[10px] text-neutral-500 font-normal bg-neutral-800/80 px-1.5 py-0.5 rounded">선택</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.ecommerceWorkload}
+                          onChange={(e) => setFormData({ ...formData, ecommerceWorkload: e.target.value })}
+                          placeholder="1080px 기준 희망 길이나 컷 수를 적어주세요"
+                          className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CASE 3: 기타 */}
+                  {formData.projectType === 'other' && (
+                    <div id="field-otherDetails" className="space-y-1.5">
+                      <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                        <span className="flex items-center gap-1.5">
+                          문의 세부 내용 직접 입력
+                          <span className="text-rose-400 text-xs font-bold" title="필수">*</span>
+                        </span>
+                      </label>
+                      <textarea
+                        rows={4}
+                        value={formData.otherDetails}
+                        onChange={(e) => {
+                          setFormData({ ...formData, otherDetails: e.target.value });
+                          if (errors.otherDetails) {
+                            setErrors({ ...errors, otherDetails: '' });
+                          }
+                        }}
+                        placeholder="문의 세부 내용을 적어주세요"
+                        className={`w-full rounded-xl border bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all resize-none ${
+                          errors.otherDetails
+                            ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
+                            : 'border-neutral-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20'
+                        }`}
+                      />
+                      {errors.otherDetails && (
+                        <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1 font-medium">
+                          <AlertCircle size={11} /> {errors.otherDetails}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </section>
+
+                {/* [섹션 4] 레퍼런스 및 스타일 가이드 */}
+                <section className="rounded-2xl border border-neutral-800/90 bg-[#121217] p-5 sm:p-6 space-y-4 shadow-sm hover:border-neutral-700/80 transition-colors">
+                  <div className="flex items-center justify-between pb-3 border-b border-neutral-800/80">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-indigo-500/10 border border-indigo-500/20 text-[11px] font-mono font-bold text-indigo-400">
+                        04
+                      </span>
+                      <h3 className="text-sm sm:text-base font-semibold text-white tracking-tight">
+                        레퍼런스 및 스타일 가이드
+                      </h3>
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-neutral-400 bg-neutral-800/80 border border-neutral-700/60 px-2 py-0.5 rounded-full">
+                      선택 사항
+                    </span>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* 지향하는 무드 */}
+                    <div className="space-y-1.5">
+                      <label className="flex items-center justify-between text-xs font-medium text-neutral-300">
+                        <span>지향하는 무드</span>
+                        <span className="text-[10px] text-neutral-500 font-normal bg-neutral-800/80 px-1.5 py-0.5 rounded">선택</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.targetMood}
+                        onChange={(e) => setFormData({ ...formData, targetMood: e.target.value })}
+                        placeholder="지향하시는 무드를 적어주세요"
+                        className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* 참고 레퍼런스 링크 1 (선택) */}
+                      <div className="space-y-1.5">
+                        <label className="flex items-center justify-between text-xs font-medium text-neutral-300">
+                          <span className="flex items-center gap-1.5">
+                            <LinkIcon size={12} className="text-neutral-500" />
+                            참고 레퍼런스 링크 1
+                          </span>
+                          <span className="text-[10px] text-neutral-500 font-normal bg-neutral-800/80 px-1.5 py-0.5 rounded">선택</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.referenceLink1}
+                          onChange={(e) => setFormData({ ...formData, referenceLink1: e.target.value })}
+                          placeholder="참고 레퍼런스 URL (선택)"
+                          className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                        />
+                      </div>
+
+                      {/* 참고 레퍼런스 링크 2 (선택) */}
+                      <div className="space-y-1.5">
+                        <label className="flex items-center justify-between text-xs font-medium text-neutral-300">
+                          <span className="flex items-center gap-1.5">
+                            <LinkIcon size={12} className="text-neutral-500" />
+                            참고 레퍼런스 링크 2
+                          </span>
+                          <span className="text-[10px] text-neutral-500 font-normal bg-neutral-800/80 px-1.5 py-0.5 rounded">선택</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.referenceLink2}
+                          onChange={(e) => setFormData({ ...formData, referenceLink2: e.target.value })}
+                          placeholder="추가 참고 레퍼런스 URL (선택)"
+                          className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    {/* 필수 주의사항 */}
+                    <div className="space-y-1.5">
+                      <label className="flex items-center justify-between text-xs font-medium text-neutral-300">
+                        <span>필수 주의사항</span>
+                        <span className="text-[10px] text-neutral-500 font-normal bg-neutral-800/80 px-1.5 py-0.5 rounded">선택</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.avoidStyles}
+                        onChange={(e) => setFormData({ ...formData, avoidStyles: e.target.value })}
+                        placeholder="주의사항을 적어주세요"
+                        className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+                </section>
+
+                {/* [섹션 5] 일정 및 예산 */}
+                <section className="rounded-2xl border border-neutral-800/90 bg-[#121217] p-5 sm:p-6 space-y-4.5 shadow-sm hover:border-neutral-700/80 transition-colors">
+                  <div className="flex items-center justify-between pb-3 border-b border-neutral-800/80">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-indigo-500/10 border border-indigo-500/20 text-[11px] font-mono font-bold text-indigo-400">
+                        05
+                      </span>
+                      <h3 className="text-sm sm:text-base font-semibold text-white tracking-tight">
+                        일정 및 예산
+                      </h3>
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-rose-300 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-full">
+                      <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
+                      납품일 & 예산 필수
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {/* 원본 전달 가능일 */}
+                    <div className="space-y-1.5">
+                      <label className="flex items-center justify-between text-xs font-medium text-neutral-300">
+                        <span className="flex items-center gap-1.5">
+                          <Calendar size={12} className="text-neutral-500" />
+                          자료 전달 가능일
+                        </span>
+                        <span className="text-[10px] text-neutral-500 font-normal bg-neutral-800/80 px-1.5 py-0.5 rounded">선택</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.rawMaterialDate}
+                        onChange={(e) => setFormData({ ...formData, rawMaterialDate: e.target.value })}
+                        className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3 py-2.5 text-xs sm:text-sm text-neutral-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                      />
+                    </div>
+
+                    {/* 1차 시안 희망일 */}
+                    <div className="space-y-1.5">
+                      <label className="flex items-center justify-between text-xs font-medium text-neutral-300">
+                        <span className="flex items-center gap-1.5">
+                          <Calendar size={12} className="text-neutral-500" />
+                          1차 시안 희망일
+                        </span>
+                        <span className="text-[10px] text-neutral-500 font-normal bg-neutral-800/80 px-1.5 py-0.5 rounded">선택</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.firstDraftDate}
+                        onChange={(e) => setFormData({ ...formData, firstDraftDate: e.target.value })}
+                        className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3 py-2.5 text-xs sm:text-sm text-neutral-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                      />
+                    </div>
+
+                    {/* 최종 납품 희망일 (필수) */}
+                    <div id="field-finalDeliveryDate" className="space-y-1.5">
+                      <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                        <span className="flex items-center gap-1.5">
+                          <Calendar size={12} className="text-indigo-400" />
+                          최종 납품 희망일
+                          <span className="text-rose-400 text-xs font-bold" title="필수">*</span>
+                        </span>
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.finalDeliveryDate}
+                        onChange={(e) => {
+                          setFormData({ ...formData, finalDeliveryDate: e.target.value });
+                          if (errors.finalDeliveryDate) {
+                            setErrors({ ...errors, finalDeliveryDate: '' });
+                          }
+                        }}
+                        className={`w-full rounded-xl border bg-[#0b0b0e] px-3 py-2.5 text-xs sm:text-sm text-neutral-100 focus:outline-none transition-all ${
+                          errors.finalDeliveryDate
+                            ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
+                            : 'border-neutral-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20'
+                        }`}
+                      />
+                      {errors.finalDeliveryDate && (
+                        <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1 font-medium">
+                          <AlertCircle size={11} /> {errors.finalDeliveryDate}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 책정 예산 범위 (필수) */}
+                  <div id="field-budgetRange" className="space-y-1.5 pt-2">
+                    <label className="flex items-center justify-between text-xs font-medium text-neutral-200">
+                      <span className="flex items-center gap-1.5">
+                        <DollarSign size={13} className="text-indigo-400" />
+                        책정 예산 범위
+                        <span className="text-rose-400 text-xs font-bold" title="필수">*</span>
+                      </span>
+                    </label>
+
+                    <input
+                      type="text"
+                      value={formData.budgetRange}
+                      onChange={(e) => {
+                        setFormData({ ...formData, budgetRange: e.target.value });
+                        if (errors.budgetRange) {
+                          setErrors({ ...errors, budgetRange: '' });
+                        }
+                      }}
+                      placeholder="희망하시는 금액을 적어주세요"
+                      className={`w-full rounded-xl border bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none transition-all ${
+                        errors.budgetRange
+                          ? 'border-rose-500/90 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20'
+                          : 'border-neutral-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20'
+                      }`}
+                    />
+
+                    {errors.budgetRange ? (
+                      <p className="mt-1 text-[11px] text-rose-400 flex items-center gap-1 font-medium">
+                        <AlertCircle size={11} /> {errors.budgetRange}
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-neutral-500 leading-relaxed">
+                        희망하시는 예산에 맞춰 최적의 작업 범위와 퀄리티 방안을 유연하게 제안해 드립니다.
+                      </p>
+                    )}
+                  </div>
+                </section>
+
+                {/* [섹션 6] 기타 요청 및 전달사항 */}
+                <section className="rounded-2xl border border-neutral-800/90 bg-[#121217] p-5 sm:p-6 space-y-4 shadow-sm hover:border-neutral-700/80 transition-colors">
+                  <div className="flex items-center justify-between pb-3 border-b border-neutral-800/80">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-indigo-500/10 border border-indigo-500/20 text-[11px] font-mono font-bold text-indigo-400">
+                        06
+                      </span>
+                      <h3 className="text-sm sm:text-base font-semibold text-white tracking-tight">
+                        기타 요청 및 전달사항
+                      </h3>
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-neutral-400 bg-neutral-800/80 border border-neutral-700/60 px-2 py-0.5 rounded-full">
+                      선택 사항
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <textarea
+                      rows={3}
+                      value={formData.additionalNotes}
+                      onChange={(e) => setFormData({ ...formData, additionalNotes: e.target.value })}
+                      placeholder="추가 요청사항이나 전달사항을 적어주세요"
+                      className="w-full rounded-xl border border-neutral-800 bg-[#0b0b0e] px-3.5 py-2.5 text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 focus:outline-none transition-all resize-none"
+                    />
+                  </div>
+                </section>
+
+                {/* 하단 고정 전송 버튼 */}
+                <div className="pt-3 sticky bottom-0 bg-[#0d0d10]/95 pb-1 backdrop-blur-md border-t border-neutral-800/80">
+                  <button
                     type="submit"
-                    disabled={isSubmitting}
-                    className="w-full flex items-center justify-center gap-2 rounded-full bg-blue-600 py-3.5 text-xs font-bold text-white uppercase tracking-wider shadow-md hover:bg-blue-700 transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                    disabled={isSubmitting || !hasValidRequiredFields}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-[0.99] py-3.5 text-sm font-semibold text-white shadow-lg shadow-indigo-600/25 transition-all disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-indigo-600"
                   >
                     {isSubmitting ? (
-                      <span>문의 전송 중...</span>
+                      <span>이메일 전송 중...</span>
                     ) : (
                       <>
-                        <span>문의 및 견적 신청하기</span>
-                        <Send size={14} />
+                        <Sparkles size={16} />
+                        <span>프로젝트 문의 보내기</span>
+                        <Send size={15} className="ml-0.5" />
                       </>
                     )}
                   </button>
+                  <p className="mt-2 text-center text-[11px] text-neutral-500">
+                    작성한 문의 내용은 contact@staylovey.com으로 전송됩니다.
+                  </p>
+                  {isContactTestMode && (
+                    <div className="mt-2 text-center">
+                      <button
+                        type="button"
+                        onClick={handleFillTestData}
+                        className="text-[11px] text-indigo-300 underline underline-offset-2 hover:text-indigo-200"
+                      >
+                        테스트 필수값 채우기
+                      </button>
+                      <p className="mt-1 text-[10px] text-neutral-500">
+                        채운 뒤 보내기를 누르면 실제 문의 메일이 발송됩니다.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </form>
-            </div>
-          )}
+            )}
+          </div>
         </motion.div>
       </div>
     </AnimatePresence>
