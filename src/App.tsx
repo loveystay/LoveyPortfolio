@@ -24,8 +24,9 @@ import {
   Image as ImageIcon,
   SlidersHorizontal,
   ShieldCheck,
+  ShieldAlert,
 } from "lucide-react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 
 export type WorksTestScenario = "all" | "empty" | "no-video" | "no-product";
 
@@ -54,6 +55,7 @@ export default function App() {
   const [isHeroOpenForProjects, setIsHeroOpenForProjects] = useState(true);
   const [isHeroStatusLoading, setIsHeroStatusLoading] = useState(isSupabaseConfigured);
   const [isHeroStatusSaving, setIsHeroStatusSaving] = useState(false);
+  const [isCaptureShieldActive, setIsCaptureShieldActive] = useState(false);
 
   const handleSelectTab = (tab: NavTab) => {
     const currentPath = normalizePath(window.location.pathname);
@@ -214,9 +216,25 @@ export default function App() {
     return () => window.removeEventListener("hashchange", checkSecretURL);
   }, []);
 
-  // Preserve basic content protections without interfering with screenshots.
+  // Copyright protection for public portfolio content.
   useEffect(() => {
+    const triggerCaptureProtection = (reason = "화면 캡처") => {
+      if (activeTabRef.current === "admin") return;
+
+      try {
+        void navigator.clipboard?.writeText(
+          "🔒 [lovey 저작권 안내] 본 포트폴리오 작업물의 무단 캡처, 복제 및 도용은 저작권법에 의해 엄격히 금지되어 있습니다. (All Rights Reserved © lovey)",
+        ).catch(() => {});
+      } catch {
+        // Clipboard access is optional and may be blocked by the browser.
+      }
+
+      setIsCaptureShieldActive(true);
+      setToastMessage(`🔒 ${reason}가 감지되어 화면이 보호 처리되었습니다.`);
+    };
+
     const handleContextMenu = (e: MouseEvent) => {
+      if (activeTabRef.current === "admin") return;
       e.preventDefault();
       setToastMessage(
         "🔒 포트폴리오 작업물의 무단 복제 및 도용을 방지하기 위해 마우스 오른쪽 버튼 사용이 제한되어 있습니다.",
@@ -237,12 +255,77 @@ export default function App() {
       }
     };
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (activeTabRef.current === "admin") return;
+
+      if (e.key === "PrintScreen" || e.code === "PrintScreen") {
+        e.preventDefault();
+        triggerCaptureProtection("PrintScreen 캡처");
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && ["s", "S"].includes(e.key)) {
+        e.preventDefault();
+        setToastMessage("🔒 작업물 저장이 제한되어 있습니다.");
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && ["p", "P"].includes(e.key)) {
+        e.preventDefault();
+        triggerCaptureProtection("화면 인쇄");
+        return;
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && ["3", "4", "5", "#", "$", "%"].includes(e.key)) {
+        e.preventDefault();
+        triggerCaptureProtection("화면 캡처");
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && ["s", "S"].includes(e.key)) {
+        e.preventDefault();
+        triggerCaptureProtection("캡처 도구");
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (activeTabRef.current !== "admin" && (e.key === "PrintScreen" || e.code === "PrintScreen")) {
+        triggerCaptureProtection("PrintScreen 캡처");
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (activeTabRef.current !== "admin" && document.visibilityState === "hidden") {
+        setIsCaptureShieldActive(true);
+      }
+    };
+
+    const handleWindowBlur = () => {
+      if (activeTabRef.current !== "admin") setIsCaptureShieldActive(true);
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (activeTabRef.current !== "admin" && e.touches.length >= 3) {
+        triggerCaptureProtection("모바일 제스처 캡처");
+      }
+    };
+
     window.addEventListener("contextmenu", handleContextMenu);
     window.addEventListener("dragstart", handleDragStart);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleWindowBlur);
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
 
     return () => {
       window.removeEventListener("contextmenu", handleContextMenu);
       window.removeEventListener("dragstart", handleDragStart);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleWindowBlur);
+      window.removeEventListener("touchstart", handleTouchStart);
     };
   }, []);
 
@@ -540,6 +623,45 @@ export default function App() {
 
       {/* Global Toast */}
       <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
+
+      <AnimatePresence>
+        {isCaptureShieldActive && activeTab !== "admin" && (
+          <motion.div
+            id="anti-capture-shield"
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.1 }}
+            onClick={() => setIsCaptureShieldActive(false)}
+            className="fixed inset-0 z-[999999] flex cursor-pointer select-none flex-col items-center justify-center bg-black p-6 text-white"
+          >
+            <div
+              className="flex max-w-sm flex-col items-center text-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-3xl border border-red-500/30 bg-red-500/15 text-red-400 shadow-2xl">
+                <ShieldAlert size={32} />
+              </div>
+              <span className="mb-1 font-mono text-[11px] font-bold tracking-widest text-red-400 uppercase">
+                SECURITY ALERT
+              </span>
+              <h2 className="mb-2 text-lg font-extrabold tracking-tight text-white sm:text-xl">
+                화면 캡처가 차단되었습니다
+              </h2>
+              <p className="mb-6 text-xs leading-relaxed text-neutral-400">
+                본 포트폴리오 작업물은 <strong className="font-bold text-white">© lovey</strong>의 저작권 보호를 받는 창작물입니다. 무단 캡처 및 복제는 엄격히 제한됩니다.
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsCaptureShieldActive(false)}
+                className="cursor-pointer rounded-full border border-neutral-700 bg-neutral-800 px-6 py-2.5 text-xs font-bold text-neutral-200 shadow-md transition hover:bg-neutral-700"
+              >
+                화면을 눌러 계속 보기
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
