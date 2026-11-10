@@ -1,4 +1,4 @@
-import { generateChatResponse, type ChatRequestBody } from './_chat';
+import { generateChatResponse, type ChatRequestBody } from './_chat.js';
 
 type ApiRequest = {
   method?: string;
